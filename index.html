@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Instrumentation — Impression NIIMBOT B1 Pro</title>
+<style>
+:root{font-family:Segoe UI,Arial,sans-serif;color:#132238;background:#eef4f9}
+*{box-sizing:border-box}body{margin:0;background:#eef4f9}.wrap{max-width:980px;margin:0 auto;padding:24px}.head{background:#0d2a47;color:#fff;border-radius:18px;padding:18px 22px;display:flex;justify-content:space-between;gap:18px;align-items:center}.head h1{font-size:22px;margin:0}.head p{margin:4px 0 0;color:#b9cddd;font-size:13px}.badge{background:#173d63;padding:8px 12px;border-radius:12px;font-weight:700;font-size:12px;white-space:nowrap}.card{margin-top:18px;background:#fff;border:1px solid #dce7f0;border-radius:18px;padding:18px;box-shadow:0 7px 24px rgba(13,42,71,.06)}.grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}.label{font-size:11px;color:#5a7189;font-weight:800;letter-spacing:.6px}.value{font-weight:800;font-size:18px;margin-top:4px}.previewBox{display:flex;align-items:center;justify-content:center;background:#f8fbfd;border:1px dashed #bdd0df;border-radius:14px;padding:18px;min-height:330px}canvas{max-width:100%;height:auto;border:1px solid #cbd7e1;background:#fff;box-shadow:0 5px 18px rgba(0,0,0,.08)}.btn{border:0;border-radius:13px;padding:14px 18px;font-weight:800;font-size:15px;cursor:pointer}.primary{background:#0873e6;color:#fff}.secondary{background:#0d2a47;color:#fff}.muted{background:#eef4f9;color:#0d2a47}.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}.status{margin-top:14px;padding:12px 14px;border-radius:12px;background:#eef6ff;color:#0d4f94;font-weight:700;font-size:13px;min-height:42px}.small{font-size:12px;color:#64778c}.error{background:#fff0f0;color:#a02b2b}.ok{background:#ecf9f2;color:#11734c}@media(max-width:760px){.grid{grid-template-columns:1fr}.wrap{padding:12px}.head{align-items:flex-start;flex-direction:column}}
+</style>
+<script src="https://cdn.jsdelivr.net/gh/iscarelli/niimbot-web-bluetooth@main/src/niimbot.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
+</head>
+<body>
+<div class="wrap">
+  <div class="head"><div><h1>Instrumentation — Impression étiquette</h1><p>NIIMBOT B1 Pro • Web Bluetooth • 38 × 25 mm</p></div><div class="badge">STELLANTIS &nbsp;|&nbsp; SEGULA</div></div>
+  <div class="grid">
+    <div class="card">
+      <div class="label">MATÉRIEL</div>
+      <div class="value" id="vType">—</div>
+      <div style="height:12px"></div>
+      <div class="label">MODÈLE</div><div id="vModel" class="value">—</div>
+      <div style="height:12px"></div>
+      <div class="label">NUMÉRO</div><div id="vNumber" class="value">—</div>
+      <div style="height:12px"></div>
+      <div class="label">CODE MATÉRIEL / VALEUR SCANNÉE</div><div id="vCode" class="value">—</div>
+      <div class="actions">
+        <button class="btn primary" id="btnPrint">CONNECTER & IMPRIMER</button>
+        <button class="btn muted" id="btnRefresh">RAFRAÎCHIR APERÇU</button>
+      </div>
+      <div id="status" class="status">Prêt. Cliquez sur « Connecter & imprimer ».</div>
+      <p class="small">Au premier usage, Edge/Chrome ouvre le sélecteur Bluetooth. Choisissez la B1 Pro. Le code-barres encode exactement le CodeMateriel affiché.</p>
+    </div>
+    <div class="card">
+      <div class="label">APERÇU 38 × 25 MM — 449 × 295 PX</div>
+      <div class="previewBox"><canvas id="labelCanvas" width="449" height="295"></canvas></div>
+    </div>
+  </div>
+</div>
+<script>
+'use strict';
+const P = new URLSearchParams(location.search);
+const MODEL = {label:'Niimbot B1 Pro', id:4097, dpi:300, protocol:'v4', task:'v4', density:3, label_type:1, speed:1, name_prefixes:['B1']};
+const SIZE = {label:'38 × 25 mm', code:'T38*25', w_mm:38, h_mm:25, w_px:449, h_px:295, margin:6, dpi:300};
+const qs = (k, d='') => (P.get(k) ?? d).trim();
+const state = {
+  type: qs('type','PASSERELLE').toUpperCase(),
+  model: qs('model','').toUpperCase(),
+  number: qs('number','').toUpperCase(),
+  code: qs('code','').toUpperCase(),
+  style: qs('style','flag').toLowerCase(),
+  mode: qs('mode','single').toLowerCase(),
+  prefix: qs('prefix','').toUpperCase(),
+  first: qs('first',''), last: qs('last',''), digits: parseInt(qs('digits','0'),10)||0
+};
+function cleanModel(m){return m.replaceAll('-','');}
+function computedCode(num){
+  if(state.code && state.mode!=='batch') return state.code;
+  let a=[]; if(state.prefix) a.push(state.prefix); else a.push(state.type.slice(0,3));
+  if(state.model) a.push(cleanModel(state.model)); if(num) a.push(num); return a.join('-').toUpperCase();
+}
+if(!state.code) state.code = computedCode(state.number);
+function setStatus(msg,kind=''){const el=document.getElementById('status');el.textContent=msg;el.className='status '+kind;}
+function fitText(ctx,text,maxWidth,startSize,minSize=12,font='Segoe UI'){let s=startSize;while(s>minSize){ctx.font=`800 ${s}px ${font}`;if(ctx.measureText(text).width<=maxWidth)break;s--;}return s;}
+function drawCar(ctx,x,y,w,h,color){ctx.save();ctx.strokeStyle=color;ctx.lineWidth=4;ctx.lineCap='round';ctx.lineJoin='round';ctx.beginPath();ctx.moveTo(x+4,y+h*.72);ctx.lineTo(x+w*.18,y+h*.72);ctx.quadraticCurveTo(x+w*.22,y+h*.38,x+w*.35,y+h*.36);ctx.lineTo(x+w*.63,y+h*.36);ctx.quadraticCurveTo(x+w*.72,y+h*.38,x+w*.82,y+h*.58);ctx.lineTo(x+w*.94,y+h*.61);ctx.quadraticCurveTo(x+w*.98,y+h*.62,x+w*.98,y+h*.72);ctx.lineTo(x+w*.90,y+h*.72);ctx.stroke();ctx.beginPath();ctx.arc(x+w*.27,y+h*.73,w*.07,0,Math.PI*2);ctx.arc(x+w*.78,y+h*.73,w*.07,0,Math.PI*2);ctx.stroke();ctx.restore();}
+function barcodeCanvas(code,w=220,h=78){const c=document.createElement('canvas');JsBarcode(c,code,{format:'CODE128',displayValue:false,margin:0,width:2,height:h,lineColor:'#000',background:'#fff'});return c;}
+function renderLabel(data){
+ const c=document.getElementById('labelCanvas'),ctx=c.getContext('2d'); ctx.clearRect(0,0,c.width,c.height);ctx.fillStyle='#fff';ctx.fillRect(0,0,c.width,c.height);
+ // Cadre
+ ctx.strokeStyle='#111';ctx.lineWidth=2;ctx.strokeRect(2,2,445,291);
+ // Header logos (visuel écran; imprimé en noir/bleu seuil thermique)
+ ctx.fillStyle='#111';ctx.font='800 24px Segoe UI,Arial';ctx.fillText('STELLANTIS',18,31);ctx.fillRect(190,10,2,26);ctx.font='800 17px Segoe UI,Arial';ctx.fillText('SEGULA',210,24);ctx.font='700 8px Segoe UI,Arial';ctx.fillText('TECHNOLOGIES',211,34);
+ // Titre drapeau
+ const blue='#0873e6';drawCar(ctx,20,48,96,56,blue);ctx.fillStyle=blue;let ts=fitText(ctx,data.type,285,32,18);ctx.font=`900 ${ts}px Segoe UI,Arial`;ctx.textAlign='center';ctx.fillText(data.type,296,83);ctx.textAlign='left';
+ // infos gauche
+ ctx.fillStyle='#111';ctx.font='700 13px Segoe UI,Arial';ctx.fillText('Modèle',20,126);ctx.fillText('Numéro',20,168);ctx.font='900 24px Segoe UI,Arial';ctx.fillText(data.model||'—',100,130);ctx.fillText(data.number||'—',100,172);
+ // séparation et code-barres
+ ctx.strokeStyle='#111';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(20,190);ctx.lineTo(429,190);ctx.stroke();
+ const bc=barcodeCanvas(data.code,240,66);const bw=Math.min(250,bc.width),bh=66;ctx.fillStyle='#fff';ctx.fillRect(174,203,255,72);ctx.drawImage(bc,0,0,bc.width,bc.height,180,204,243,64);
+ ctx.fillStyle='#111';let cs=fitText(ctx,data.code,238,14,10);ctx.font=`900 ${cs}px ui-monospace,Consolas,monospace`;ctx.textAlign='center';ctx.fillText(data.code,301,287);ctx.textAlign='left';
+ // petit ID à gauche
+ ctx.font='700 9px Segoe UI,Arial';ctx.fillText('ID MATÉRIEL',20,216);let ids=fitText(ctx,data.code,145,13,9,'ui-monospace');ctx.font=`800 ${ids}px ui-monospace,Consolas,monospace`;ctx.fillText(data.code,20,234);
+ return c.toDataURL('image/png');
+}
+function currentData(){return {type:state.type,model:state.model,number:state.number,code:state.code};}
+function batchData(){
+ const a=Number(state.first),b=Number(state.last); if(!Number.isFinite(a)||!Number.isFinite(b)||b<a) return [];
+ const digs=state.digits||Math.max(state.first.length,state.last.length);let out=[];
+ for(let n=a;n<=b;n++){const num=String(n).padStart(digs,'0');out.push({type:state.type,model:state.model,number:num,code:computedCode(num)});}return out;
+}
+function syncUI(){document.getElementById('vType').textContent=state.type||'—';document.getElementById('vModel').textContent=state.model||'—';document.getElementById('vNumber').textContent=state.mode==='batch'?`${state.first} → ${state.last}`:(state.number||'—');document.getElementById('vCode').textContent=state.mode==='batch'?`${batchData().length} étiquettes`:(state.code||'—');renderLabel(currentData());document.getElementById('btnPrint').textContent=state.mode==='batch'?`CONNECTER & IMPRIMER LE LOT (${batchData().length})`:'CONNECTER & IMPRIMER';}
+syncUI();
+document.getElementById('btnRefresh').onclick=syncUI;
+document.getElementById('btnPrint').onclick=async()=>{
+ try{
+   if(!window.Niimbot || !Niimbot.isSupported()) throw new Error('Web Bluetooth indisponible. Utilisez Microsoft Edge ou Google Chrome en HTTPS.');
+   setStatus('Connexion à la B1 Pro…');
+   const info=await Niimbot.identify(MODEL); if(info && info.modelId && info.modelId!==4097) throw new Error('Imprimante détectée non B1 Pro (modelId '+info.modelId+').');
+   if(state.mode==='batch'){
+     const items=batchData(); if(!items.length) throw new Error('Plage de numéros invalide.');
+     const urls=items.map(x=>renderLabel(x)); renderLabel(items[0]);
+     setStatus(`Impression du lot : ${items.length} étiquettes…`);
+     await Niimbot.printBatch(urls,{model:MODEL,size:SIZE,onProgress:s=>setStatus('Impression : '+(typeof s==='string'?s:JSON.stringify(s)))});
+     setStatus(`Lot terminé : ${items.length} étiquettes imprimées.`,'ok');
+   }else{
+     if(!state.code) throw new Error('Code matériel vide.');
+     const url=renderLabel(currentData()); setStatus('Impression de '+state.code+'…');
+     await Niimbot.printImage(url,{model:MODEL,size:SIZE,onProgress:s=>setStatus('Impression : '+(typeof s==='string'?s:JSON.stringify(s)))});
+     setStatus('Étiquette imprimée : '+state.code,'ok');
+   }
+ }catch(e){console.error(e);setStatus(e && e.message?e.message:String(e),'error');}
+};
+</script>
+</body>
+</html>
