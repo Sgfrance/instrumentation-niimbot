@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="theme-color" content="#071a2e">
+<title>Scanner Instrumentation V127</title>
+<script src="https://unpkg.com/@zxing/browser@0.2.1/umd/zxing-browser.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@ericblade/quagga2@1.12.1/dist/quagga.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+<style>
+:root{--navy:#071a2e;--cyan:#65d5ff;--blue:#1476d4;--ok:#11b779;--warn:#ffb020;--danger:#ed4056;--white:#fff}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;width:100%;height:100%;height:100dvh;overflow:hidden;background:#000;font-family:Inter,Segoe UI,Arial,sans-serif;color:#fff}
+#app{position:fixed;inset:0;background:#000;overflow:hidden}
+#camera{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;background:#000;z-index:1}
+.top{position:absolute;z-index:30;left:0;right:0;top:0;padding:max(14px,env(safe-area-inset-top)) 16px 18px;background:linear-gradient(180deg,rgba(4,17,30,.97),rgba(4,17,30,.72),transparent);pointer-events:none}
+.brand{font-weight:900;font-size:20px;letter-spacing:.2px}.sub{font-size:12px;color:#c7d9e9;margin-top:4px}.badges{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px}.badgeTop{padding:7px 10px;border-radius:9px;background:rgba(255,255,255,.14);font-size:12px;font-weight:900}
+.close{position:absolute;z-index:50;right:14px;top:max(14px,env(safe-area-inset-top));width:54px;height:54px;border:0;border-radius:18px;background:rgba(5,20,35,.82);color:white;font-size:29px;font-weight:900;backdrop-filter:blur(8px)}
+.aim{position:absolute;z-index:20;left:4vw;right:4vw;top:30%;height:37%;min-height:235px;max-height:380px;border:3px solid rgba(101,213,255,.96);border-radius:24px;box-shadow:0 0 0 9999px rgba(0,0,0,.16),0 0 34px rgba(43,181,244,.38);pointer-events:none}
+.aim.material:after{content:"CODE / QR";position:absolute;right:14px;top:12px;padding:4px 7px;border-radius:7px;background:rgba(0,0,0,.45);font-size:10px;font-weight:900;color:#d9f5ff}
+.aim:before{content:"ID MATÉRIEL";position:absolute;left:14px;bottom:12px;padding:4px 7px;border-radius:7px;background:rgba(0,0,0,.45);font-size:10px;font-weight:900;color:#d9f5ff}
+.laser{position:absolute;left:4%;right:4%;height:3px;top:50%;background:linear-gradient(90deg,transparent,#ff4054 15%,#ff4054 85%,transparent);box-shadow:0 0 11px #ff4054;animation:sweep 1.8s ease-in-out infinite alternate}@keyframes sweep{from{transform:translateY(-85px)}to{transform:translateY(85px)}}
+.bottom{position:absolute;z-index:30;left:0;right:0;bottom:0;padding:18px 14px calc(16px + env(safe-area-inset-bottom));background:linear-gradient(0deg,rgba(4,17,30,.99),rgba(4,17,30,.86),transparent)}
+.hint{text-align:center;font-size:15px;font-weight:900;margin-bottom:11px;text-shadow:0 1px 3px #000}.small{text-align:center;font-size:11px;color:#c7d9e9;margin-top:9px;min-height:16px}.controls{display:flex;gap:8px;justify-content:center;align-items:center}.pill{border:1px solid rgba(255,255,255,.25);background:rgba(255,255,255,.14);color:white;padding:11px 12px;border-radius:14px;font-weight:900;font-size:12px;min-height:48px}.pill:disabled{opacity:.4}.primaryPill{background:rgba(20,118,212,.78);border-color:#65d5ff}.photo{background:rgba(101,213,255,.14);border-color:rgba(101,213,255,.5)}#photoInput{display:none}#zoomWrap{display:none;align-items:center;gap:6px;min-width:92px}.zoomLabel{font-size:11px;font-weight:900}#zoom{width:82px}.engine{display:inline-block;margin-top:6px;padding:5px 8px;border-radius:8px;background:rgba(101,213,255,.12);color:#bfefff;font-size:10px;font-weight:800}
+.startLayer,.resultLayer,.candidateLayer{position:absolute;z-index:70;inset:0;display:flex;align-items:center;justify-content:center;padding:24px;background:radial-gradient(circle at 50% 28%,#183e61,#071a2e 72%)}
+.card{width:min(520px,100%);background:#fff;color:#10263b;border-radius:26px;padding:26px 21px;text-align:center;box-shadow:0 18px 60px rgba(0,0,0,.38)}.icon{font-size:48px}.card h1{font-size:23px;margin:11px 0 8px}.card p{font-size:14px;line-height:1.45;color:#607487;margin:0 0 17px}.primary{width:100%;border:0;border-radius:16px;padding:16px 18px;background:#1476d4;color:white;font-weight:900;font-size:17px}.secondary{width:100%;border:0;border-radius:16px;padding:14px 18px;margin-top:10px;background:#edf3f8;color:#18354f;font-weight:800;font-size:14px}.danger{background:#fff0f2;color:#b82434}.error{margin-top:12px;font-size:12px;color:#b82434;display:none}.resultLayer,.candidateLayer{display:none}.code{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;background:#edf8f3;color:#08784f;padding:13px;border-radius:12px;font-size:16px;font-weight:900;word-break:break-word;margin:14px 0}.tag{display:inline-block;background:#daf7e8;color:#08784f;border-radius:999px;padding:7px 11px;font-size:12px;font-weight:900}.candidateInput{width:100%;border:2px solid #a8bfd2;border-radius:14px;padding:14px 12px;font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:16px;font-weight:900;text-transform:uppercase;margin:10px 0 2px;color:#10263b}.candidateNote{font-size:11px;color:#6d8193;margin:6px 0 14px}.manualRow{display:flex;gap:8px;margin-top:12px}.manualRow input{flex:1;min-width:0;border:1px solid #c7d6e3;border-radius:12px;padding:12px;font-size:14px}.manualRow button{border:0;border-radius:12px;padding:10px 12px;background:#1476d4;color:#fff;font-weight:900}
+</style>
+</head>
+<body>
+<div id="app">
+  <video id="camera" autoplay muted playsinline webkit-playsinline></video>
+  <div class="top"><div class="brand">INSTRUMENTATION • SCANNER</div><div class="sub">Anciennes étiquettes : ID texte + Code128 • QR compatible</div><div class="badges"><span class="badgeTop" id="modeBadge">MATÉRIEL</span><span class="badgeTop" id="cmBadge">CONTRE-MARQUE : —</span></div></div>
+  <button class="close" id="closeBtn" aria-label="Fermer">×</button>
+  <div class="aim material" id="aim"><div class="laser"></div></div>
+  <div class="bottom">
+    <div class="hint" id="hint">Cadre l’étiquette entière : code + ID matériel</div>
+    <div class="controls">
+      <button class="pill" id="torchBtn" disabled>🔦 Lampe</button>
+      <button class="pill primaryPill" id="ocrBtn">🔤 Lire l’ID</button>
+      <button class="pill photo" id="photoBtn">📷 Photo</button>
+      <input id="photoInput" type="file" accept="image/*" capture="environment">
+      <div id="zoomWrap"><span class="zoomLabel">Zoom</span><input id="zoom" type="range"></div>
+    </div>
+    <div class="small" id="status">Caméra arrêtée</div><div style="text-align:center"><span class="engine" id="engine">V127 • attente</span></div>
+  </div>
+  <div class="startLayer" id="startLayer"><div class="card"><div class="icon">📷</div><h1>Scanner plein écran</h1><p>Cadre l’étiquette entière. Le scanner tente d’abord QR/Code128, puis lit automatiquement l’ID imprimé en clair.</p><button class="primary" id="startBtn">ACTIVER LA CAMÉRA</button><button class="secondary" id="cancelStart">Retour à l’application</button><div class="manualRow"><input id="startManual" placeholder="Ou saisir le code"><button id="startManualBtn">OK</button></div><div class="error" id="startError"></div></div></div>
+  <div class="candidateLayer" id="candidateLayer"><div class="card"><span class="tag">ID TEXTE DÉTECTÉ</span><h1>Vérifie le code</h1><p>L’ancienne étiquette a été lue par reconnaissance du texte imprimé. Corrige si nécessaire puis confirme.</p><input class="candidateInput" id="candidateInput" autocomplete="off" autocapitalize="characters"><div class="candidateNote" id="candidateNote">La validation évite d’envoyer un mauvais ID dans Power Apps.</div><button class="primary" id="candidateConfirm">CONFIRMER</button><button class="secondary" id="candidateRetry">REPRENDRE LE SCAN</button></div></div>
+  <div class="resultLayer" id="resultLayer"><div class="card"><span class="tag">✓ CODE VALIDÉ</span><h1 id="resultTitle">Matériel reconnu</h1><div class="code" id="resultCode"></div><p>Retour vers Instrumentation Mobile…</p><button class="primary" id="returnBtn">RETOURNER À L’APPLICATION</button><a class="secondary" id="webFallback" style="display:block;text-decoration:none">Ouvrir via le lien Power Apps</a></div></div>
+</div>
+<script>
+(() => {
+'use strict';
+const APP_ID='e62876c3-7682-44d7-8c22-82b482702cc8';
+const TENANT='d852d5cd-724c-4128-8812-ffa5db3f8507';
+const ENV='default-d852d5cd-724c-4128-8812-ffa5db3f8507';
+const WEB_BASE='https://apps.powerapps.com/play/e/default-d852d5cd-724c-4128-8812-ffa5db3f8507/a/e62876c3-7682-44d7-8c22-82b482702cc8';
+const qs=new URLSearchParams(location.search);
+const mode=((qs.get('mode')||'materiel').toLowerCase()==='mallette')?'mallette':'materiel';
+const cm=(qs.get('cm')||'').trim().toUpperCase();
+const malletteInitial=(qs.get('mallette')||'').trim().toUpperCase();
+const itemsParam=qs.get('items')||'';
+const sessionItems=String(itemsParam).split('|').map(x=>x.trim().toUpperCase()).filter(Boolean).filter((v,i,a)=>a.indexOf(v)===i);
+const video=document.getElementById('camera'),aim=document.getElementById('aim'),startLayer=document.getElementById('startLayer'),resultLayer=document.getElementById('resultLayer'),candidateLayer=document.getElementById('candidateLayer'),statusEl=document.getElementById('status'),engineEl=document.getElementById('engine'),startError=document.getElementById('startError'),torchBtn=document.getElementById('torchBtn'),zoomWrap=document.getElementById('zoomWrap'),zoom=document.getElementById('zoom'),photoInput=document.getElementById('photoInput'),candidateInput=document.getElementById('candidateInput');
+document.getElementById('modeBadge').textContent=mode==='mallette'?'📦 MALLETTE':'🔧 MATÉRIEL';document.getElementById('cmBadge').textContent='CONTRE-MARQUE : '+(cm||'—');document.getElementById('hint').textContent=mode==='mallette'?'Cadre le code / QR de la mallette (ou son identifiant lisible)':'Cadre l’étiquette entière : code + ID matériel';document.getElementById('resultTitle').textContent=mode==='mallette'?'Mallette reconnue':'Matériel reconnu';
+let stream=null,track=null,detected=false,torchOn=false,decodeTimer=null,zxingReader=null,quaggaBusy=false,ocrBusy=false,ocrWorker=null,lastOcrAt=0,scanTick=0,pendingCandidate='';
+const roi=document.createElement('canvas'),bwCanvas=document.createElement('canvas');
+function cleanCode(s){return String(s||'').replace(/[\r\n\t]/g,' ').replace(/\s+/g,' ').trim().toUpperCase()}
+function buildParams(code=''){
+ const p=new URLSearchParams({tenantId:TENANT,environmentId:ENV,restartApp:'true',source:'scanner'});p.set('scanMode',mode);if(cm)p.set('scanCM',cm);p.set('items',sessionItems.join('|'));
+ if(mode==='mallette'){ if(code)p.set('mallette',code); else if(malletteInitial)p.set('mallette',malletteInitial); }
+ else { if(malletteInitial)p.set('mallette',malletteInitial); if(code)p.set('scanCode',code); }
+ return p;
+}
+function deepLink(code=''){return `ms-apps:///providers/Microsoft.PowerApps/apps/${APP_ID}?${buildParams(code).toString()}`}
+function webLink(code=''){const p=buildParams(code);p.delete('environmentId');p.delete('restartApp');return `${WEB_BASE}?${p.toString()}`}
+function stopCamera(){if(decodeTimer){clearTimeout(decodeTimer);decodeTimer=null}if(stream){for(const t of stream.getTracks())try{t.stop()}catch(e){}stream=null}try{video.pause()}catch(e){}video.srcObject=null;track=null;torchOn=false;quaggaBusy=false}
+function goBack(code=''){stopCamera();location.href=deepLink(code)}
+document.getElementById('closeBtn').onclick=()=>goBack('');document.getElementById('cancelStart').onclick=()=>goBack('');
+async function finalDetected(raw,source='code'){
+ const code=cleanCode(raw);if(!code||detected)return;detected=true;try{navigator.vibrate?.([80,50,110])}catch(e){}stopCamera();document.getElementById('resultCode').textContent=code;document.getElementById('returnBtn').onclick=()=>goBack(code);document.getElementById('webFallback').href=webLink(code);candidateLayer.style.display='none';resultLayer.style.display='flex';engineEl.textContent='✓ '+source+' validé';setTimeout(()=>{location.href=deepLink(code)},650);
+}
+function showCandidate(raw,note='ID texte détecté'){
+ const code=cleanCode(raw);if(!code||detected)return;pendingCandidate=code;candidateInput.value=code;document.getElementById('candidateNote').textContent=note+' • vérifie puis confirme.';candidateLayer.style.display='flex';
+}
+document.getElementById('candidateConfirm').onclick=()=>finalDetected(candidateInput.value,'ID texte');document.getElementById('candidateRetry').onclick=()=>{candidateLayer.style.display='none';pendingCandidate='';if(stream&&video.paused)video.play().catch(()=>{})};
+document.getElementById('startManualBtn').onclick=()=>{const v=document.getElementById('startManual').value;if(v)finalDetected(v,'saisie')};
+function grabAimCanvas(target=roi){if(!video.videoWidth||!video.videoHeight)return null;const vr=video.getBoundingClientRect(),ar=aim.getBoundingClientRect(),scale=Math.max(vr.width/video.videoWidth,vr.height/video.videoHeight),renderW=video.videoWidth*scale,renderH=video.videoHeight*scale,offX=vr.left+(vr.width-renderW)/2,offY=vr.top+(vr.height-renderH)/2;let sx=(ar.left-offX)/scale,sy=(ar.top-offY)/scale,sw=ar.width/scale,sh=ar.height/scale;sx-=sw*.03;sw*=1.06;sy-=sh*.04;sh*=1.08;sx=Math.max(0,sx);sy=Math.max(0,sy);sw=Math.min(video.videoWidth-sx,sw);sh=Math.min(video.videoHeight-sy,sh);if(sw<20||sh<20)return null;const tw=Math.min(2200,Math.max(1500,Math.round(sw*2.1))),th=Math.max(450,Math.round(sh*tw/sw));target.width=tw;target.height=th;const c=target.getContext('2d',{willReadFrequently:true});c.imageSmoothingEnabled=true;c.imageSmoothingQuality='high';c.drawImage(video,sx,sy,sw,sh,0,0,tw,th);return target}
+function preprocess(src,threshold=165){bwCanvas.width=src.width;bwCanvas.height=src.height;const c=bwCanvas.getContext('2d',{willReadFrequently:true});c.filter='grayscale(1) contrast(1.55) brightness(1.08)';c.drawImage(src,0,0);c.filter='none';const img=c.getImageData(0,0,bwCanvas.width,bwCanvas.height),d=img.data;for(let i=0;i<d.length;i+=4){const v=d[i],o=v<threshold?0:255;d[i]=d[i+1]=d[i+2]=o}c.putImageData(img,0,0);return bwCanvas}
+function normalizeOcr(s){return String(s||'').toUpperCase().replace(/[‐‑‒–—]/g,'-').replace(/[“”"'`]/g,'').replace(/[^A-Z0-9\-\/ :]+/g,' ').replace(/\s*[-:]\s*/g,m=>m.includes(':')?':':'-').replace(/\s+/g,' ').trim()}
+function repairPrefix(s){return s.replace(/^P[1I]E-/,'PIE-').replace(/^S[1I]M-/,'SIM-').replace(/^L[1I]N-/,'LIN-').replace(/^PA5-/,'PAS-').replace(/^H-MTD-/,'H-MTD-')}
+function extractCandidates(text){
+ const rawLines=String(text||'').split(/\r?\n/),out=[];for(const raw of rawLines){const line=normalizeOcr(raw);if(!line)continue;let after=line;const m=line.match(/(?:ID(?: MATERIEL| MATÉRIEL)?|CODE(?: MATERIEL| MATÉRIEL)?)[ :]?(.{5,})/);if(m)after=m[1];const pats=after.match(/[A-Z0-9]{2,}(?:-[A-Z0-9][A-Z0-9 ]{0,35}){1,6}/g)||[];for(let p of pats){p=repairPrefix(normalizeOcr(p));if(p.length<6||p.length>80||!p.includes('-'))continue;if(mode==='materiel'&&!/\d/.test(p))continue;let score=(p.match(/-/g)||[]).length*3+(/^(PIE|SIM|LIN|PAS|H-MTD|EPLU|MOD|FD10|KIT)-/.test(p)?12:0)+(/\d{2,}$/.test(p)?7:0)+(m?10:0)+(p.length>10?2:0);out.push({p,score})}}
+ out.sort((a,b)=>b.score-a.score||b.p.length-a.p.length);return [...new Map(out.map(x=>[x.p,x])).values()];
+}
+async function ensureOcr(){if(ocrWorker)return ocrWorker;if(!window.Tesseract)return null;engineEl.textContent='Initialisation OCR ID…';try{ocrWorker=await Tesseract.createWorker('eng');await ocrWorker.setParameters({tessedit_char_whitelist:'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-/ :',preserve_interword_spaces:'1',tessedit_pageseg_mode:'6'});return ocrWorker}catch(e){ocrWorker=null;return null}}
+async function runOcr(force=false,canvas=null){if(ocrBusy||detected)return;const now=Date.now();if(!force&&now-lastOcrAt<1400)return;lastOcrAt=now;const base=canvas||grabAimCanvas();if(!base)return;ocrBusy=true;try{const worker=await ensureOcr();if(!worker)return;engineEl.textContent='Lecture de l’ID imprimé…';const variants=[base,preprocess(base,155),preprocess(base,185)];let best='';for(const v of variants){const r=await worker.recognize(v);const c=extractCandidates(r?.data?.text||'');if(c.length){best=c[0].p;break}}if(best){statusEl.textContent='ID repéré : '+best;showCandidate(best,'ID lu sur l’ancienne étiquette');return}statusEl.textContent='ID non lu • rapproche ou utilise Photo';}catch(e){statusEl.textContent='OCR temporairement indisponible'}finally{ocrBusy=false}}
+document.getElementById('ocrBtn').onclick=()=>runOcr(true);
+function zxingTry(canvas){if(!window.ZXingBrowser)return '';try{if(!zxingReader)zxingReader=new ZXingBrowser.BrowserMultiFormatReader();const r=zxingReader.decodeFromCanvas(canvas);if(r){if(typeof r.getText==='function')return r.getText();if(r.text)return r.text}}catch(e){}return ''}
+function quaggaTry(canvas){if(!window.Quagga||quaggaBusy||detected)return;quaggaBusy=true;let src='';try{src=canvas.toDataURL('image/jpeg',.95)}catch(e){quaggaBusy=false;return}Quagga.decodeSingle({src,numOfWorkers:0,locate:true,inputStream:{size:0,singleChannel:false},locator:{halfSample:false,patchSize:'medium'},decoder:{readers:['code_128_reader'],multiple:false}},r=>{quaggaBusy=false;const code=r?.codeResult?.code||'';if(code)finalDetected(code,'Code128')})}
+async function nativeDetectorTry(canvas){try{if(!('BarcodeDetector' in window))return '';const formats=await BarcodeDetector.getSupportedFormats();const wanted=['qr_code','code_128'].filter(x=>formats.includes(x));if(!wanted.length)return '';const det=new BarcodeDetector({formats:wanted});const r=await det.detect(canvas);return r?.[0]?.rawValue||''}catch(e){return ''}}
+async function decodeLoop(){if(detected||!stream)return;scanTick++;try{const c=grabAimCanvas();if(c){const n=await nativeDetectorTry(c);if(n){finalDetected(n,'QR/Code');return}if(scanTick%2===0){const z=zxingTry(c);if(z){finalDetected(z,'QR/Code');return}}if(scanTick%3===0)quaggaTry(c);if(scanTick%7===0)runOcr(false,c)}}catch(e){}engineEl.textContent='V127 • QR + Code128 + OCR ID';decodeTimer=setTimeout(decodeLoop,190)}
+async function decodePhoto(file){if(!file)return;statusEl.textContent='Analyse de la photo haute définition…';const url=URL.createObjectURL(file);try{const img=new Image();img.src=url;await img.decode();const c=document.createElement('canvas'),maxW=2600,scale=Math.min(1,maxW/(img.naturalWidth||maxW));c.width=Math.max(1,Math.round(img.naturalWidth*scale));c.height=Math.max(1,Math.round(img.naturalHeight*scale));c.getContext('2d',{willReadFrequently:true}).drawImage(img,0,0,c.width,c.height);const n=await nativeDetectorTry(c);if(n){finalDetected(n,'QR/Code');return}const z=zxingTry(c);if(z){finalDetected(z,'QR/Code');return}await runOcr(true,c)}catch(e){statusEl.textContent='Impossible d’analyser la photo'}finally{setTimeout(()=>URL.revokeObjectURL(url),1500)}}
+document.getElementById('photoBtn').onclick=()=>photoInput.click();photoInput.onchange=()=>{const f=photoInput.files?.[0];if(f)decodePhoto(f);photoInput.value=''};
+async function configureTrack(){track=stream?.getVideoTracks?.()[0]||null;if(!track)return;try{const caps=track.getCapabilities?track.getCapabilities():{},adv=[];if(Array.isArray(caps.focusMode)&&caps.focusMode.includes('continuous'))adv.push({focusMode:'continuous'});if(adv.length)await track.applyConstraints({advanced:adv});if(caps.torch){torchBtn.disabled=false;torchBtn.onclick=async()=>{torchOn=!torchOn;try{await track.applyConstraints({advanced:[{torch:torchOn}]});torchBtn.textContent=torchOn?'🔦 Lampe ON':'🔦 Lampe'}catch(e){torchOn=false}}}if(caps.zoom&&caps.zoom.max>caps.zoom.min){zoomWrap.style.display='flex';zoom.min=caps.zoom.min;zoom.max=caps.zoom.max;zoom.step=caps.zoom.step||.1;zoom.value=caps.zoom.min;zoom.oninput=async()=>{try{await track.applyConstraints({advanced:[{zoom:Number(zoom.value)}]})}catch(e){}}}}catch(e){}}
+async function startCamera(){startError.style.display='none';detected=false;if(!navigator.mediaDevices?.getUserMedia){startError.textContent='Ce navigateur ne permet pas la caméra.';startError.style.display='block';return}stopCamera();statusEl.textContent='Ouverture de la caméra arrière…';try{stream=await navigator.mediaDevices.getUserMedia({audio:false,video:{facingMode:{ideal:'environment'},width:{ideal:1920},height:{ideal:1080},frameRate:{ideal:30,max:60}}});video.setAttribute('playsinline','');video.setAttribute('webkit-playsinline','');video.setAttribute('autoplay','');video.muted=true;video.playsInline=true;video.srcObject=stream;await new Promise(r=>{if(video.readyState>=2)return r();video.addEventListener('loadedmetadata',r,{once:true});setTimeout(r,3000)});try{await video.play()}catch(e){}if(!video.videoWidth)throw new Error('Aucune image caméra reçue');startLayer.style.display='none';statusEl.textContent=mode==='mallette'?'Caméra active • scanne la mallette':'Caméra active • cadre l’étiquette complète';await configureTrack();ensureOcr().catch(()=>{});decodeLoop()}catch(e){stopCamera();startError.textContent='Impossible d’afficher la caméra : '+(e?.message||e);startError.style.display='block';statusEl.textContent='Caméra non disponible'}}
+document.getElementById('startBtn').onclick=startCamera;setTimeout(()=>startCamera().catch(()=>{}),220);
+})();
+</script>
+</body>
+</html>
