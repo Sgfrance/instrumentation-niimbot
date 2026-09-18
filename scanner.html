@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="theme-color" content="#071a2e">
+<title>Scanner matériel • Instrumentation</title>
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<style>
+:root{--navy:#071a2e;--blue:#1476d4;--cyan:#65d5ff;--ok:#11b779;--danger:#ed4056;--white:#fff}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;width:100%;height:100%;height:100dvh;overflow:hidden;background:#000;font-family:Inter,Segoe UI,Arial,sans-serif;color:#fff}
+#app{position:fixed;inset:0;background:#000;overflow:hidden}
+#reader{position:absolute;inset:0;background:#000;overflow:hidden}
+#reader video{position:absolute!important;inset:0!important;width:100%!important;height:100%!important;max-width:none!important;object-fit:cover!important;transform:none!important}
+#reader canvas{display:none!important}
+.top{position:absolute;z-index:30;left:0;right:0;top:0;padding:max(12px,env(safe-area-inset-top)) 16px 14px;background:linear-gradient(180deg,rgba(4,17,30,.94),rgba(4,17,30,.60),transparent);pointer-events:none}
+.brand{font-weight:900;font-size:19px;letter-spacing:.2px}.sub{font-size:12px;color:#c7d9e9;margin-top:3px}.cm{display:inline-block;margin-top:9px;padding:7px 10px;border-radius:9px;background:rgba(255,255,255,.13);font-size:12px;font-weight:800}
+.close{position:absolute;z-index:40;right:14px;top:max(12px,env(safe-area-inset-top));width:52px;height:52px;border:0;border-radius:16px;background:rgba(5,20,35,.72);color:white;font-size:25px;font-weight:800;backdrop-filter:blur(8px)}
+.aim{position:absolute;z-index:20;left:5vw;right:5vw;top:37%;height:25%;min-height:150px;max-height:250px;border:3px solid rgba(101,213,255,.92);border-radius:22px;box-shadow:0 0 0 9999px rgba(0,0,0,.24),0 0 28px rgba(43,181,244,.38);pointer-events:none}
+.aim:before,.aim:after{content:"";position:absolute;left:50%;transform:translateX(-50%);width:58%;height:2px;background:rgba(255,255,255,.24)}.aim:before{top:35%}.aim:after{top:65%}
+.laser{position:absolute;left:4%;right:4%;height:3px;top:50%;background:linear-gradient(90deg,transparent,#ff4054 15%,#ff4054 85%,transparent);box-shadow:0 0 10px #ff4054;animation:sweep 1.7s ease-in-out infinite alternate}
+@keyframes sweep{from{transform:translateY(-62px)}to{transform:translateY(62px)}}
+.bottom{position:absolute;z-index:30;left:0;right:0;bottom:0;padding:16px 16px calc(16px + env(safe-area-inset-bottom));background:linear-gradient(0deg,rgba(4,17,30,.96),rgba(4,17,30,.82),transparent)}
+.hint{text-align:center;font-size:14px;font-weight:800;margin-bottom:12px;text-shadow:0 1px 3px #000}.small{text-align:center;font-size:11px;color:#c7d9e9;margin-top:8px}
+.controls{display:flex;gap:10px;justify-content:center;align-items:center}.pill{border:1px solid rgba(255,255,255,.22);background:rgba(255,255,255,.12);color:white;padding:11px 14px;border-radius:14px;font-weight:800;font-size:13px;min-height:46px}.pill:disabled{opacity:.4}
+#zoomWrap{display:none;align-items:center;gap:8px;flex:1;max-width:290px}.zoomLabel{font-size:12px;font-weight:800}#zoom{width:100%}
+.startLayer,.resultLayer{position:absolute;z-index:60;inset:0;display:flex;align-items:center;justify-content:center;padding:24px;background:radial-gradient(circle at 50% 30%,#183e61,#071a2e 70%)}
+.card{width:min(520px,100%);background:#fff;color:#10263b;border-radius:26px;padding:26px 22px;text-align:center;box-shadow:0 18px 60px rgba(0,0,0,.35)}
+.icon{font-size:50px}.card h1{font-size:24px;margin:12px 0 8px}.card p{font-size:14px;line-height:1.45;color:#607487;margin:0 0 18px}.primary{width:100%;border:0;border-radius:16px;padding:17px 18px;background:#1476d4;color:white;font-weight:900;font-size:17px}.secondary{width:100%;border:0;border-radius:16px;padding:14px 18px;margin-top:10px;background:#edf3f8;color:#18354f;font-weight:800;font-size:14px}
+.error{margin-top:12px;font-size:12px;color:#b82434;display:none}.resultLayer{display:none}.code{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;background:#edf8f3;color:#08784f;padding:13px;border-radius:12px;font-size:17px;font-weight:900;word-break:break-all;margin:14px 0}.badge{display:inline-block;background:#daf7e8;color:#08784f;border-radius:999px;padding:7px 11px;font-size:12px;font-weight:900}.fallback{font-size:11px;color:#6c7f91;margin-top:10px}.hidden{display:none!important}
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="reader"></div>
+  <div class="top">
+    <div class="brand">INSTRUMENTATION • SCANNER</div>
+    <div class="sub">Code-barres matériel • caméra arrière haute définition</div>
+    <div class="cm" id="cmBadge">CONTRE-MARQUE : —</div>
+  </div>
+  <button class="close" id="closeBtn" aria-label="Fermer">×</button>
+  <div class="aim"><div class="laser"></div></div>
+  <div class="bottom">
+    <div class="hint">Place le code-barres dans le grand cadre</div>
+    <div class="controls">
+      <button class="pill" id="torchBtn" disabled>🔦 Lampe</button>
+      <div id="zoomWrap"><span class="zoomLabel">Zoom</span><input id="zoom" type="range"></div>
+    </div>
+    <div class="small" id="status">Initialisation de la caméra arrière…</div>
+  </div>
+
+  <div class="startLayer" id="startLayer">
+    <div class="card">
+      <div class="icon">📷</div>
+      <h1>Scanner plein écran</h1>
+      <p>Utilise la vraie caméra arrière du téléphone. Le viseur occupe tout l’écran et la mise au point est optimisée pour les petits codes-barres.</p>
+      <button class="primary" id="startBtn">OUVRIR LA CAMÉRA</button>
+      <button class="secondary" id="cancelStart">Retour à l’application</button>
+      <div class="error" id="startError"></div>
+    </div>
+  </div>
+
+  <div class="resultLayer" id="resultLayer">
+    <div class="card">
+      <span class="badge">✓ CODE DÉTECTÉ</span>
+      <h1>Matériel reconnu</h1>
+      <div class="code" id="resultCode"></div>
+      <p>Retour vers Instrumentation Mobile…</p>
+      <button class="primary" id="returnBtn">RETOURNER À L’APPLICATION</button>
+      <a class="secondary" id="webFallback" style="display:block;text-decoration:none">Ouvrir via le lien Power Apps</a>
+      <div class="fallback">Si le retour automatique ne s’ouvre pas, utilise le bouton ci-dessus.</div>
+    </div>
+  </div>
+</div>
+<script>
+(() => {
+  'use strict';
+  const APP_ID='e62876c3-7682-44d7-8c22-82b482702cc8';
+  const TENANT='d852d5cd-724c-4128-8812-ffa5db3f8507';
+  const ENV='default-d852d5cd-724c-4128-8812-ffa5db3f8507';
+  const WEB_BASE='https://apps.powerapps.com/play/e/default-d852d5cd-724c-4128-8812-ffa5db3f8507/a/e62876c3-7682-44d7-8c22-82b482702cc8';
+  const qs=new URLSearchParams(location.search);
+  const cm=(qs.get('cm')||'').trim().toUpperCase();
+  const mallette=(qs.get('mallette')||'').trim().toUpperCase();
+  document.getElementById('cmBadge').textContent='CONTRE-MARQUE : '+(cm||'—');
+
+  const startLayer=document.getElementById('startLayer');
+  const resultLayer=document.getElementById('resultLayer');
+  const startError=document.getElementById('startError');
+  const statusEl=document.getElementById('status');
+  const torchBtn=document.getElementById('torchBtn');
+  const zoomWrap=document.getElementById('zoomWrap');
+  const zoom=document.getElementById('zoom');
+  let scanner=null, track=null, detected=false, torchOn=false, lastCode='';
+
+  function deepLink(code=''){
+    const p=new URLSearchParams({tenantId:TENANT,environmentId:ENV,restartApp:'true',source:'scanner'});
+    if(code) p.set('scanCode',code);
+    if(cm) p.set('scanCM',cm);
+    if(mallette) p.set('mallette',mallette);
+    return `ms-apps:///providers/Microsoft.PowerApps/apps/${APP_ID}?${p.toString()}`;
+  }
+  function webLink(code=''){
+    const p=new URLSearchParams({tenantId:TENANT,source:'scanner'});
+    if(code) p.set('scanCode',code);
+    if(cm) p.set('scanCM',cm);
+    if(mallette) p.set('mallette',mallette);
+    return `${WEB_BASE}?${p.toString()}`;
+  }
+  function goBack(code=''){
+    location.href=deepLink(code);
+  }
+  document.getElementById('closeBtn').onclick=()=>goBack('');
+  document.getElementById('cancelStart').onclick=()=>goBack('');
+
+  async function requestFullscreen(){
+    try{if(document.documentElement.requestFullscreen && !document.fullscreenElement) await document.documentElement.requestFullscreen()}catch(e){}
+  }
+  async function setupTrack(){
+    await new Promise(r=>setTimeout(r,250));
+    const video=document.querySelector('#reader video');
+    track=video?.srcObject?.getVideoTracks?.()[0]||null;
+    if(!track)return;
+    try{
+      const caps=track.getCapabilities?track.getCapabilities():{};
+      if(caps.focusMode && Array.isArray(caps.focusMode) && caps.focusMode.includes('continuous')){
+        try{await track.applyConstraints({advanced:[{focusMode:'continuous'}]})}catch(e){}
+      }
+      if(caps.width || caps.height){
+        try{await track.applyConstraints({width:{ideal:1920},height:{ideal:1080}})}catch(e){}
+      }
+      if(caps.zoom){
+        const min=Number(caps.zoom.min??1),max=Number(caps.zoom.max??min),step=Number(caps.zoom.step??0.1);
+        if(max>min){
+          zoom.min=min; zoom.max=max; zoom.step=step; zoom.value=Math.min(max,Math.max(min,min+(max-min)*0.20));
+          zoomWrap.style.display='flex';
+          try{await track.applyConstraints({advanced:[{zoom:Number(zoom.value)}]})}catch(e){}
+        }
+      }
+      if(caps.torch){torchBtn.disabled=false}
+    }catch(e){}
+  }
+  zoom.addEventListener('input',async()=>{if(!track)return;try{await track.applyConstraints({advanced:[{zoom:Number(zoom.value)}]})}catch(e){}});
+  torchBtn.onclick=async()=>{if(!track)return;torchOn=!torchOn;try{await track.applyConstraints({advanced:[{torch:torchOn}]});torchBtn.textContent=torchOn?'🔦 Lampe ON':'🔦 Lampe'}catch(e){torchOn=false}};
+
+  async function onDetected(decodedText){
+    if(detected)return;
+    const code=(decodedText||'').trim().toUpperCase();
+    if(!code)return;
+    detected=true; lastCode=code;
+    try{navigator.vibrate?.([80,50,120])}catch(e){}
+    statusEl.textContent='Code détecté : '+code;
+    try{await scanner.stop()}catch(e){}
+    document.getElementById('resultCode').textContent=code;
+    document.getElementById('returnBtn').onclick=()=>goBack(code);
+    const fallback=document.getElementById('webFallback');
+    fallback.href=webLink(code);
+    resultLayer.style.display='flex';
+    setTimeout(()=>{location.href=deepLink(code)},650);
+  }
+
+  async function startScanner(){
+    startError.style.display='none';
+    detected=false;
+    await requestFullscreen();
+    if(typeof Html5Qrcode==='undefined'){
+      startError.textContent='Le moteur de scan n’a pas pu être chargé. Vérifie la connexion Internet.';
+      startError.style.display='block'; return;
+    }
+    scanner=new Html5Qrcode('reader',{formatsToSupport:[Html5QrcodeSupportedFormats.CODE_128],verbose:false});
+    const config={fps:18,disableFlip:true,experimentalFeatures:{useBarCodeDetectorIfSupported:true}};
+    statusEl.textContent='Ouverture de la caméra arrière…';
+    try{
+      await scanner.start({facingMode:{exact:'environment'}},config,onDetected,()=>{});
+    }catch(e1){
+      try{
+        const cams=await Html5Qrcode.getCameras();
+        if(!cams||!cams.length)throw e1;
+        let cam=cams.find(c=>/back|rear|environment|arrière|traseira|trasera/i.test(c.label));
+        if(!cam) cam=cams[cams.length-1];
+        await scanner.start(cam.id,config,onDetected,()=>{});
+      }catch(e2){
+        try{
+          scanner=new Html5Qrcode('reader',{formatsToSupport:[Html5QrcodeSupportedFormats.CODE_128],verbose:false});
+          await scanner.start({facingMode:'environment'},config,onDetected,()=>{});
+        }catch(e3){
+          startError.textContent='Impossible d’ouvrir la caméra arrière. Autorise la caméra dans le navigateur puis réessaie.';
+          startError.style.display='block';
+          statusEl.textContent='Caméra non disponible';
+          return;
+        }
+      }
+    }
+    startLayer.style.display='none';
+    statusEl.textContent='Caméra arrière active • rapproche-toi jusqu’à ce que le code soit net';
+    await setupTrack();
+  }
+  document.getElementById('startBtn').onclick=startScanner;
+
+  // Tentative automatique : si le navigateur l’autorise, la caméra s’ouvre directement.
+  setTimeout(()=>startScanner().catch(()=>{}),180);
+})();
+</script>
+</body>
+</html>
