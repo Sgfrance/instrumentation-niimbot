@@ -1,0 +1,24 @@
+(function(root,factory){const api=factory();if(typeof module==='object'&&module.exports)module.exports=api;else root.MobileCore=api})(typeof globalThis!=='undefined'?globalThis:this,function(){
+'use strict';
+const normalize=v=>String(v??'').trim().toUpperCase();
+const profiles={LUCAS:'Lucas',QUENTIN:'Quentin',THEO:'Théo'};
+function validCode(v){return typeof v==='string'&&v.trim().length>0&&v.length<=255&&!/[|\r\n\u0000]/.test(v)}
+function isRequest(row,profile,now=Date.now()){const f=row?.fields;return !!f&&f.ScanSession===profile&&f.ScanStatut==='Demandé'&&!!f.ScanJeton&&!!f.ContreMarque&&Number.isFinite(Date.parse(f.ScanDate))&&now-Date.parse(f.ScanDate)<1800000&&now-Date.parse(f.ScanDate)>=-60000}
+function own(row,task,profile){const f=row?.fields,t=task?.fields;if(!f||!t||row.id!==task.id||f.ScanSession!==profile||f.ScanJeton!==t.ScanJeton||f.ScanStatut!=='En cours'||f.ContreMarque!==t.ContreMarque)throw Error('La demande a changé ou ne vous est plus affectée. Les écritures sont bloquées.');return row}
+function operation(task,stock){return 'WEB-'+task.id+'-'+stock.id+'-'+task.fields.ScanJeton}
+function available(stock,assignment,task){if(!stock)throw Error('Matériel inconnu.');const f=stock.fields,cm=task.fields.ContreMarque;if(assignment&&(assignment.fields.ContreMarque!==cm||assignment.fields.AffectationID!==operation(task,stock)))throw Error('Matériel déjà affecté : '+assignment.fields.ContreMarque);if(!((f.Statut==='Disponible'&&!f.VehiculeAffecte)||(f.Statut==='Monté'&&f.VehiculeAffecte===cm)))throw Error('Matériel indisponible ou monté sur un autre véhicule.');return stock}
+function createWorkflow(api,operator,profile){
+ async function fresh(task){return own(await api.item('planning',task.id),task,profile())}
+ async function inspect(code,task){if(!validCode(code))throw Error('Code matériel invalide.');const stock=await api.find('stock','Title',normalize(code));const active=(await api.rows('assignments','CodeMateriel',normalize(code))).filter(a=>a.fields.Actif===true);if(active.length>1)throw Error('Plusieurs affectations actives : vérification du stock nécessaire.');available(stock,active[0],task);return {stock,active:active[0]}}
+ async function mount(code,task,mallette){await fresh(task);let {stock,active}=await inspect(code,task);const f=stock.fields,cm=task.fields.ContreMarque,op=operation(task,stock),who=operator(),day=new Date().toISOString();await api.patch('stock',stock,{Statut:'Monté',VehiculeAffecte:cm,MalletteID:mallette});
+  const material=await api.find('materials','CodeMateriel',code);const fields={Title:code,CodeMateriel:code,TypeMateriel:f.TypeMateriel||'',Modele:f.Modele||'',Numero:f.Numero||'',Statut:'Monté',ContreMarqueActuelle:cm,DateDernierMouvement:day,OperateurDernierMouvement:who,Actif:true};if(material)await api.patch('materials',material,fields);else await api.create('materials',fields);
+  if(!active)await api.create('assignments',{Title:op,AffectationID:op,CodeMateriel:code,TypeMateriel:f.TypeMateriel||'',Modele:f.Modele||'',Numero:f.Numero||'',ContreMarque:cm,DateDebut:day,Actif:true,OperateurMontage:who,ModeAffectation:'Montage',Commentaire:mallette?'Mallette : '+mallette:''});else if(active.fields.Commentaire!==(mallette?'Mallette : '+mallette:''))await api.patch('assignments',active,{Commentaire:mallette?'Mallette : '+mallette:''});
+  if(!await api.find('movements','MouvementID',op))await api.create('movements',{Title:'Montage '+code,MouvementID:op,DateHeure:day,TypeMouvement:'Montage',Modele:f.Modele||'',Numero:f.Numero||'',ContreMarqueDestination:cm,Operateur:who,SourceApplication:'Mobile',Detail:code+' • '+(f.TypeMateriel||'')+' • '+(f.Modele||'')+' n° '+(f.Numero||''),Alerte:false,AlerteResolue:false});
+ }
+ async function validate(task,codes,mallette){if(!codes.length)throw Error('Scannez au moins un matériel.');const list=[...new Set(codes.map(normalize))];if(list.some(c=>!validCode(c))||mallette&&!validCode(mallette))throw Error('Un code est invalide.');try{await fresh(task);for(const code of list)await inspect(code,task)}catch(e){e.beforeWrite=true;throw e}for(const code of list)await mount(code,task,mallette);
+  const row=await fresh(task),cm=row.fields.ContreMarque;const vehicle=await api.find('vehicles','ContreMarque',cm);if(!vehicle)throw Error('La fiche véhicule du PC est absente.');await api.patch('vehicles',vehicle,{StatutInstrumentation:'Terminé',DateDernierMontage:new Date().toISOString(),DerniereModificationInstrumentation:new Date().toISOString()});const aff=(await api.rows('assignments','ContreMarque',cm)).filter(r=>r.fields.Actif===true);const latest=await fresh(task);return api.patch('planning',latest,{ScanStatut:'Terminé',StatutMontage:'Terminé',NB_MAT:aff.length,NB_MTG:1,Operateur:operator()});
+ }
+ return {fresh,inspect,validate};
+}
+return {normalize,profiles,validCode,isRequest,own,available,operation,createWorkflow};
+});
