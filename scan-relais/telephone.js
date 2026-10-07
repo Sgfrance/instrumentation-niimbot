@@ -53,7 +53,7 @@ function render(){
   $('receiptText').textContent=stagedRevision>=revision&&revision>0?'Lot reçu dans SharePoint. La confirmation du montage se fait sur le PC.':'Lot enregistré dans le relais. Transfert vers SharePoint en cours ; vous pouvez rester sur cet accueil.';
 }
 function archive(){if(!task)return;const history=read('inst-v10-history-'+person)||[];store('inst-v10-history-'+person,[{task,batch,submitted,at:Date.now()},...history.filter(x=>x.task.id!==task.id)].slice(0,20))}
-function schedulePoll(delay=3000){if(pollTimer)clearTimeout(pollTimer);pollTimer=null;if(session&&!document.hidden)pollTimer=setTimeout(()=>poll(),delay)}
+function schedulePoll(delay=1500){if(pollTimer)clearTimeout(pollTimer);pollTimer=null;if(session&&!document.hidden)pollTimer=setTimeout(()=>poll(),delay)}
 function select(next){
   if(finishing||sending||!$('scanner').hidden)return;save();pollGeneration++;pollController?.abort();pollController=null;if(progressTimer)clearTimeout(progressTimer);
   person=next;session=registry?.stations.find(s=>s.person===person);if(session)session={...session,url:registry.url};
@@ -68,20 +68,21 @@ async function poll(force=false){
   if(pollController&&!force)return;
   if(pollTimer)clearTimeout(pollTimer);pollTimer=null;
   if(force)pollController?.abort();
-  const controller=new AbortController(),generation=++pollGeneration,captured=session;
+  const controller=new AbortController(),generation=++pollGeneration,captured=session;let showReceived=false;
   pollController=controller;const timeout=setTimeout(()=>controller.abort(),12000);
   try{
     const d=await api('status',null,captured,controller.signal);
     if(generation!==pollGeneration||captured.token!==session?.token||controller.signal.aborted)return;
-    if(d.task&&d.task.id!==task?.id){stopScanner();archive();task=d.task;batch={items:[],mallette:''};seq=0;submitted=false;revision=0;stagedRevision=0;queued=null;PhoneAlerts.arrival(person,task.id)}
+    if(d.task&&d.task.id!==task?.id){stopScanner();archive();task=d.task;batch={items:[],mallette:''};seq=0;submitted=false;revision=0;stagedRevision=0;queued=null;showReceived=true;PhoneAlerts.arrival(person,task.id)}
     else if(d.task)task=d.task;
     if(!d.task){stopScanner();if(task)archive();task=null;batch={items:[],mallette:''};submitted=false;queued=null;PhoneAlerts.forget(person)}
-    if(task){task.feedback=!!d.feedback;submitted=submitted||!!d.received;stagedRevision=Math.max(stagedRevision,d.stagedRevision||0);revision=Math.max(revision,d.revision||0);if(task.feedback&&!$('scanner').hidden)stopScanner()}
+    if(task){task.feedback=!!d.feedback;submitted=submitted||!!d.received;stagedRevision=Math.max(stagedRevision,d.stagedRevision||0);revision=Math.max(revision,d.revision||0);if(task.feedback&&!$('scanner').hidden)stopScanner();if(!submitted&&!task.feedback)PhoneAlerts.arrival(person,task.id)}
+    $('lastCheck').textContent='Actualisation automatique · '+new Date().toLocaleTimeString('fr-FR');
     $('feedback').hidden=!d.feedback;$('feedbackText').textContent=d.feedback?.message||'';
     $('status').textContent=!task?(d.lastCompletion?.status==='Terminé'?'Montage confirmé sur le PC. En attente pour '+person+'.':'En attente d’une demande pour '+person):d.feedback?'Anomalie signalée sur le PC. En attente de la nouvelle demande.':submitted?(stagedRevision>=revision&&revision>0?'Lot reçu sur le PC. En attente d’une nouvelle demande pour '+person+'.':'Lot transmis. Vous pouvez choisir un prénom ; le transfert SharePoint continue.'):'Demande reçue pour '+task.cm+'. Vous pouvez scanner.';
     save();if(task&&!submitted&&!queued&&!sending&&seq>0&&seq>(d.clientSeq??-1))queueProgress();
   }catch(e){if(generation===pollGeneration){$('status').textContent=e.status===403||e.status===410?'Accès révoqué. Demandez le nouveau lien privé. Scans locaux conservés.':e.name==='AbortError'?'Connexion ralentie. Nouvelle vérification automatique…':e.message+' · Nouvelle vérification automatique. Scans locaux conservés.'}}
-  finally{clearTimeout(timeout);if(generation===pollGeneration){pollController=null;render();schedulePoll()}}
+  finally{clearTimeout(timeout);if(generation===pollGeneration){pollController=null;render();if(showReceived&&!submitted)$('task').scrollIntoView?.({behavior:'smooth',block:'start'});schedulePoll()}}
 }
 function payload(){return {id:task.id,cm:task.cm,items:[...batch.items],mallette:batch.mallette,device,seq:++seq}}
 function queueProgress(){if(!task||submitted||finishing)return;queued=payload();save();if(progressTimer)clearTimeout(progressTimer);progressTimer=setTimeout(flushProgress,350)}
@@ -118,11 +119,14 @@ window.addEventListener('message',async e=>{
   }else{if(d.type==='instrumentation-mobile-abandon')stopScanner();render();queueProgress()}
 });
 $('scan').onclick=()=>scan('materiel');$('case').onclick=()=>scan('mallette');$('finish').onclick=finish;
-$('names').onclick=e=>{const next=e.target.closest?.('[data-person]')?.dataset.person||e.target.dataset.person;if(NAMES.includes(next)){PhoneAlerts.enable(false);select(next)}};
+$('names').onclick=async e=>{const next=e.target.closest?.('[data-person]')?.dataset.person||e.target.dataset.person;if(NAMES.includes(next)){const d=await PhoneAlerts.enable(false);$('soundNote').textContent=d.message;select(next)}};
 $('sound').onclick=async()=>{const d=await PhoneAlerts.enable(true);$('soundNote').textContent=d.message};
 $('refresh').onclick=()=>poll(true);
-function wake(){if(!document.hidden)poll(true)}
+function wake(){if(!document.hidden){PhoneAlerts.resume?.();poll(true)}}
 window.addEventListener('focus',wake);window.addEventListener('pageshow',wake);window.addEventListener('online',wake);
 document.addEventListener('visibilitychange',()=>{if(document.hidden){pollGeneration++;pollController?.abort();pollController=null;if(pollTimer)clearTimeout(pollTimer)}else wake()});
-try{const h=new URLSearchParams(location.hash.slice(1));registry=validateRegistry(h.has('stations')?{url:h.get('relay'),stations:JSON.parse(h.get('stations'))}:read('inst-v7-registry-mobile'));history.replaceState(null,'',location.pathname+location.search);person=read('inst-v7-person-mobile')||'QUENTIN'}catch(e){$('status').textContent=e.message}
+function keepPermanentLink(){if(!registry)return;const u=new URL('telephone.html',location.href);u.hash=new URLSearchParams({relay:registry.url,stations:JSON.stringify(registry.stations.map(s=>({person:s.person,id:s.id,token:s.token})))});history.replaceState(null,'',u.href)}
+try{const h=new URLSearchParams(location.hash.slice(1));registry=validateRegistry(h.has('stations')?{url:h.get('relay'),stations:JSON.parse(h.get('stations'))}:read('inst-v7-registry-mobile'));keepPermanentLink();person=read('inst-v7-person-mobile')||'QUENTIN'}catch(e){$('status').textContent=e.message}
+$('pair').hidden=!!registry;
+$('pairConfirm').onclick=()=>{try{const u=new URL($('pairLink').value.trim());if(u.origin!==location.origin)throw Error('Utilisez le lien privé de cette page scanner.');const h=new URLSearchParams(u.hash.slice(1));registry=validateRegistry({url:h.get('relay'),stations:JSON.parse(h.get('stations')||'null')});$('pairLink').value='';keepPermanentLink();$('pair').hidden=true;select(person)}catch(e){$('status').textContent=e.message}};
 select(NAMES.includes(person)?person:'QUENTIN');

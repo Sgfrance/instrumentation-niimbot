@@ -2,7 +2,8 @@
 // Web Audio is armed only from a tap; it cannot wake a background browser.
 const PhoneAlerts = (() => {
   let audio = null, enabled = false;
-  const seen = new Map();
+  const seen = new Map(), arrivals = new Map();
+  let pending = null;
   function running() { return enabled && audio?.state === 'running'; }
   function tone() {
     if (!running()) return false;
@@ -27,7 +28,8 @@ const PhoneAlerts = (() => {
       if (!audio || audio.state === 'closed') audio = new Constructor();
       await audio.resume(); enabled = audio.state === 'running';
       if (!enabled) return { ok: false, message: 'Touchez Activer le son pour réessayer.' };
-      if (test) tone();
+      if (pending) { if(tone()) { seen.set(pending.person,pending.taskId); pending=null; } }
+      else if (test) tone();
       return { ok: true, message: 'Son actif · gardez cette page ouverte et le volume audible.' };
     } catch {
       enabled = false;
@@ -36,13 +38,19 @@ const PhoneAlerts = (() => {
   }
   function arrival(person, taskId) {
     if (!taskId || seen.get(person) === taskId) return false;
-    seen.set(person, taskId);
+    pending={person,taskId};
     const sounded = tone();
-    if (sounded && typeof navigator.vibrate === 'function') {
+    if(sounded){seen.set(person,taskId);pending=null;}
+    if (arrivals.get(person)!==taskId && typeof navigator.vibrate === 'function') {
       try { navigator.vibrate([120, 60, 120]); } catch {}
     }
+    arrivals.set(person,taskId);
     return sounded;
   }
-  function forget(person) { seen.delete(person); }
-  return { enable, arrival, running, forget };
+  function forget(person) { seen.delete(person); arrivals.delete(person); if(pending?.person===person)pending=null; }
+  async function resume() {
+    if (!enabled || !audio || audio.state === 'closed') return false;
+    try { await audio.resume(); return running(); } catch { return false; }
+  }
+  return { enable, arrival, running, forget, resume };
 })();

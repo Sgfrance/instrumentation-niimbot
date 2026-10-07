@@ -23,13 +23,13 @@ iframe{position:fixed;inset:0;width:100%;height:100dvh;border:0;background:#071a
 </head>
 <body>
 <main>
-  <header><span class="version">V10.2 · HTML</span><div class="eyebrow">Instrumentation</div><h1>Scanner l’atelier</h1><p>Choisissez votre prénom. Les demandes de véhicule arrivent automatiquement ici.</p></header>
+  <header><span class="version">V11 · HTML</span><div class="eyebrow">Instrumentation</div><h1>Scanner l’atelier</h1><p>Choisissez votre prénom. Les demandes de véhicule arrivent automatiquement ici.</p></header>
   <section>
     <h2>Qui utilise ce téléphone ?</h2>
     <div class="names" id="names"><button data-person="LUCAS"><span>L</span>Lucas</button><button data-person="QUENTIN"><span>Q</span>Quentin</button><button data-person="THEO"><span>T</span>Théo</button></div>
-    <p class="hint" id="identity"></p><div id="status" role="status">Connexion au scanner…</div><button id="refresh">↻ Vérifier les demandes</button>
+    <p class="hint" id="identity"></p><div id="status" role="status">Connexion au scanner…</div><p id="lastCheck" class="hint" role="status">Actualisation automatique · vérification des demandes…</p><button id="refresh" hidden>Vérifier</button>
   </section>
-  <section class="utility"><button id="sound">Activer le bip</button><p class="hint" id="soundNote">Gardez cette page au premier plan pour recevoir les demandes.</p></section>
+  <section id="pair" hidden><h2>Raccorder ce téléphone</h2><p class="hint">Collez une fois le lien permanent copié dans Accès scanner, puis ajoutez cette page aux favoris. Ce favori privé conserve le raccordement même si le navigateur efface son stockage.</p><input id="pairLink" type="password" autocomplete="off" placeholder="Lien permanent du téléphone" style="width:100%;font:inherit;padding:14px;border:1px solid #cbdce7;border-radius:12px"><button id="pairConfirm" style="width:100%;margin-top:10px">Raccorder le téléphone</button></section><section class="utility"><button id="sound">Activer le bip</button><p class="hint" id="soundNote">Touchez votre prénom ou Activer le bip une fois. Gardez la page au premier plan et le volume audible.</p></section>
   <section id="receipt" class="receipt" hidden><h2 id="receiptTitle">Lot envoyé</h2><p class="hint" id="receiptText"></p></section>
   <section id="feedback" class="anomaly" hidden><h2>Anomalie signalée sur le PC</h2><p id="feedbackText"></p><p class="hint">Le lot est conservé. Attendez la nouvelle demande de scan.</p></section>
   <section id="task" hidden>
@@ -41,6 +41,6 @@ iframe{position:fixed;inset:0;width:100%;height:100dvh;border:0;background:#071a
   </section>
 </main>
 <iframe id="scanner" allow="camera" title="Scanner matériel" hidden></iframe>
-<script src="phone-alerts.js?v=10.2"></script><script src="telephone.js?v=10.2"></script>
+<script src="phone-alerts.js?v=11"></script><script src="telephone.js?v=11"></script>
 </body>
 </html>
