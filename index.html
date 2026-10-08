@@ -55,7 +55,7 @@ html,body{width:100%;max-width:100%;overflow-x:hidden}
 }
 
 
-.preview{min-height:440px}.preview canvas{width:472px;max-width:100%;border-radius:12px;image-rendering:auto}
+.preview{min-height:440px}.preview canvas{width:591px;max-width:100%;border-radius:12px;image-rendering:auto}
 .value{overflow-wrap:anywhere}input:focus{outline:2px solid #594ae4;outline-offset:2px}
 @media(max-width:760px){.app{display:block}.side{display:none}.grid{display:flex;flex-direction:column}.top{flex-wrap:wrap}.preview{min-height:340px}.actions{display:block}.main{padding:12px}}
 </style>
@@ -2363,7 +2363,7 @@ var qrcode = function() {
 </head>
 <body>
 <div class="app">
-<aside class="side"><div class="brand">INSTRUMENTATION<small>Gestion du parc matériel</small></div><div class="line"></div><div class="navitem active">＋ Impression étiquette</div><div class="navitem">◇ Stock matériel</div><div class="navitem">▤ Gérer le référentiel</div><div class="navitem">▥ État du stock</div><div class="sidefoot">INSTRUMENTATION 2.0<br>SEGULA TECHNOLOGIES<br>Étiquettes 40 × 20 mm</div></aside>
+<aside class="side"><div class="brand">INSTRUMENTATION<small>Gestion du parc matériel</small></div><div class="line"></div><div class="navitem active">＋ Impression étiquette</div><div class="navitem">◇ Stock matériel</div><div class="navitem">▤ Gérer le référentiel</div><div class="navitem">▥ État du stock</div><div class="sidefoot">INSTRUMENTATION 2.0<br>SEGULA TECHNOLOGIES<br>Étiquettes 50 × 30 mm</div></aside>
 <main class="main">
 <div class="top"><div><h1 id="pageTitle">Impression étiquette</h1><p id="pageSubtitle">NIIMBOT B1 Pro • Web Bluetooth • contrôle RFID du rouleau</p></div><div class="user">SEGULA TECHNOLOGIES<small>Impression sécurisée depuis Edge / Chrome</small></div></div>
 <div class="grid">
@@ -2373,12 +2373,12 @@ var qrcode = function() {
 <div class="field" id="fModel"><label id="lModel">Modèle</label><input id="vModel" maxlength="60" aria-label="Model" autocomplete="off"></div>
 <div class="field" id="fNumber"><label id="lNumber">Numéro / plage</label><input id="vNumber" maxlength="60" aria-label="Number" autocomplete="off"></div>
 <div class="field" id="fCode"><label id="lCode">Code matériel / valeur scannée</label><div id="vCode" class="value">—</div></div>
-<div class="field"><label for="extraText">Texte complémentaire (facultatif)</label><input id="extraText" maxlength="60" placeholder="Ex. Atelier instrumentation"></div><button type="button" class="mini" id="resetText">Rétablir les textes du matériel</button><p class="note">Les textes sont modifiables pour cette impression. Le code du QR reste celui du matériel référencé ; aucune modification du stock.</p><div class="field"><label>Format d’étiquette</label><select id="format"><option value="flag">Drapeau câble 38 × 25 mm • pli horizontal</option><option value="standard">Standard 40 × 20 mm • tous matériels</option></select></div>
+<div class="field"><label for="extraText">Texte complémentaire (facultatif)</label><input id="extraText" maxlength="60" placeholder="Ex. Atelier instrumentation"></div><button type="button" class="mini" id="resetText">Rétablir les textes du matériel</button><p class="note">Les textes sont modifiables pour cette impression. Le code du QR reste celui du matériel référencé ; aucune modification du stock.</p><div class="field"><label>Format d’étiquette</label><select id="format"><option value="flag">Drapeau câble 38 × 25 mm • pli horizontal</option><option value="standard">Standard 50 × 30 mm • tous matériels</option></select></div>
 <div class="field" id="modeField"><label>Mode d'impression</label><div class="seg"><button id="singleBtn">Individuel</button><button id="batchBtn">Série</button></div></div>
 <div class="field"><label>Nombre d'exemplaires</label><div class="copyrow"><button id="minus">−</button><input id="copies" value="1" readonly><button id="plus">+</button></div></div>
 <div class="status" id="status">Prêt. La B1 Pro sera contrôlée avant l'impression.</div>
 </section>
-<section class="card"><h2>Aperçu réel</h2><div class="preview"><canvas id="labelCanvas" width="472" height="236"></canvas><div class="actual" id="actual">Standard 40 × 20 mm • tous matériels</div></div></section>
+<section class="card"><h2>Aperçu réel</h2><div class="preview"><canvas id="labelCanvas" width="591" height="354"></canvas><div class="actual" id="actual">Standard 50 × 30 mm • tous matériels</div></div></section>
 <section class="card actions">
 <h2>Actions</h2>
 <button class="primary" id="btnPrint">Contrôler & imprimer</button>
@@ -2386,8 +2386,8 @@ var qrcode = function() {
 <button class="outline" id="btnDownload">Télécharger l’étiquette PNG</button><button class="outline" id="btnBatch">Imprimer le lot</button>
 <div class="rollbox">
 <h3>Contrôle du rouleau</h3>
-<label style="display:flex;align-items:flex-start;gap:9px;font-size:13px;font-weight:700;line-height:1.4;margin-bottom:10px"><input id="forcePaper" type="checkbox" checked style="width:auto;flex:none;margin-top:3px">Forcer le format 40 × 20 mm</label>
-<div class="note" style="margin-bottom:12px">Envoie l’étiquette en 40 × 20 mm même si le rouleau RFID est inconnu ou associé à un autre format. Chargez le rouleau 40 × 20 avant d’imprimer.</div>
+<label style="display:flex;align-items:flex-start;gap:9px;font-size:13px;font-weight:700;line-height:1.4;margin-bottom:10px"><input id="forcePaper" type="checkbox" checked style="width:auto;flex:none;margin-top:3px">Forcer le format 50 × 30 mm</label>
+<div class="note" style="margin-bottom:12px">Envoie l’étiquette en 50 × 30 mm même si le rouleau RFID est inconnu ou associé à un autre format. Chargez le rouleau 50 × 30 avant d’imprimer.</div>
 <div class="rollgrid">
 <div class="rollcell"><span>Imprimante</span><b id="rPrinter">Non connectée</b></div>
 <div class="rollcell"><span>Format attendu</span><b id="rExpected">—</b></div>
@@ -2408,18 +2408,18 @@ var qrcode = function() {
 'use strict';
 const P=new URLSearchParams((location.hash||'').replace(/^#/,'')||location.search.replace(/^\?/,''));
 const qs=(k,d='')=>String(P.get(k)??d).trim();
-console.info('Instrumentation — étiquettes 40×20 et QR matériel');
-const FORMAT_LABEL={flag:'Drapeau horizontal',standard:'Standard 40 × 20 mm'};
+console.info('Instrumentation — étiquettes 50×30 et QR matériel');
+const FORMAT_LABEL={flag:'Drapeau horizontal',standard:'Standard 50 × 30 mm'};
 const MODEL={label:'Niimbot B1 Pro',id:4097,dpi:300,protocol:'v4',task:'v4',density:3,label_type:1,speed:1,name_prefixes:['B1']};
 const SIZE_FLAG={label:'Drapeau câble T25*38+40',code:'T25x38',w_mm:25,h_mm:38,w_px:295,h_px:449,margin:0,dpi:300}; // raster envoyé en portrait 25×38 pour compenser l'orientation physique B1 Pro
-const SIZE_STD={label:'Standard 40×20',code:'EW40*20-345White',w_mm:40,h_mm:20,w_px:472,h_px:236,margin:0,dpi:300};
-const SIZE_CASE={label:'Mallette 40×20',code:'EW40*20-345White',w_mm:40,h_mm:20,w_px:472,h_px:236,margin:0,dpi:300};
+const SIZE_STD={label:'Standard 50×30',code:'T50*30-230White',w_mm:50,h_mm:30,w_px:591,h_px:354,margin:0,dpi:300};
+const SIZE_CASE={label:'Mallette 50×30',code:'T50*30-230White',w_mm:50,h_mm:30,w_px:591,h_px:354,margin:0,dpi:300};
 const requestedStyle=qs('style','').toLowerCase();
 const requestedMode=qs('mode','single').toLowerCase();
 const isCase=requestedMode==='case'||requestedMode==='mallette';
 function makeCaseCode(){const d=new Date(),p=n=>String(n).padStart(2,'0');return `MLT-${String(d.getFullYear()).slice(-2)}${p(d.getMonth()+1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}${p(d.getSeconds())}-${p(Math.floor(Math.random()*90)+10)}`}
 const state={type:qs('type',isCase?'MALLETTE VÉHICULE':'PASSERELLE').toUpperCase(),model:qs('model',isCase?'IDENTIFIANT PERMANENT':'A-7852').toUpperCase(),number:qs('number',isCase?'À RENSEIGNER AU SCAN':'58').toUpperCase(),code:qs('code',isCase?makeCaseCode():'PS-A-7852-58'),mode:requestedMode,prefix:qs('prefix','').toUpperCase(),first:qs('first',''),last:qs('last',''),digits:+qs('digits','0')||0,format:'standard',formatLocked:isCase,copies:1,lastJob:null,connected:false,rfid:null,rollBarcode:'',rollFormat:'',rollGate:'pending',forcePaper:true};
-const STORAGE_KEY='instrumentation-niimbot:roll-format:40x20:v3';
+const STORAGE_KEY='instrumentation-niimbot:roll-format:50x30:v3';
 const KNOWN_ROLL_FORMATS={'040926195':'flag'};
 const el=id=>document.getElementById(id);
 const clean=m=>(m||'').replaceAll('-','');
@@ -2475,29 +2475,29 @@ function drawCase(c,d){
   return c
 }
 function drawStandard(c,d){
- // 40 × 20 mm at 300 dpi. Equal 14 px side margins; no scaling of QR modules.
- c.width=472;c.height=236;
- const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,472,236);
- function text(t,px,py,width,size,min=14,font='Arial',weight=700,align='left'){
+ // Native 50 × 30 mm raster at 300 dpi; QR modules remain square and unscaled.
+ c.width=591;c.height=354;
+ const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,591,354);
+ function text(t,px,py,width,size,min=16,font='Arial',weight=700,align='left'){
   x.fillStyle='#000';x.textAlign=align;x.textBaseline='alphabetic';
   const fs=fit(x,String(t),width,size,min,font);x.font=`${weight} ${fs}px ${font}`;
   x.fillText(String(t),px,py,width);
  }
- text('SEGULA TECHNOLOGIES',236,23,444,20,20,'Arial',900,'center');
- x.fillStyle='#000';x.fillRect(14,33,238,1);
- text(d.type||'MATÉRIEL',14,71,238,31,18);
- // Small equipment pictogram, kept outside the QR quiet zone.
- x.strokeStyle='#000';x.lineWidth=2;x.strokeRect(17,91,16,17);
- for(const yy of [95,103]){x.beginPath();x.moveTo(13,yy);x.lineTo(17,yy);x.moveTo(33,yy);x.lineTo(37,yy);x.stroke()}
- x.strokeRect(22,96,6,7);
- text(d.model||'',45,113,207,36,18);
- text('N°',14,162,30,18,18);
- text(d.number||'—',50,164,202,46,18);
- text(d.extra||'',14,182,248,14,12,'Arial',600);
- drawQR(x,String(d.code||''),284,25,174,4);
- text(d.code,236,227,444,32,16,'Arial',900,'center');
+ text('SEGULA TECHNOLOGIES',295.5,34,559,26,26,'Arial',900,'center');
+ x.fillStyle='#000';x.fillRect(16,48,559,2);
+ text(d.type||'MATÉRIEL',16,105,289,40,20);
+ x.strokeStyle='#000';x.lineWidth=2;x.strokeRect(20,137,20,21);
+ for(const yy of [142,153]){x.beginPath();x.moveTo(15,yy);x.lineTo(20,yy);x.moveTo(40,yy);x.lineTo(45,yy);x.stroke()}
+ x.strokeRect(26,143,8,9);
+ text(d.model||'',55,167,250,44,20);
+ text('N°',16,237,38,23,23);
+ text(d.number||'—',61,243,244,66,22);
+ text(d.extra||'',16,278,289,18,14,'Arial',600);
+ drawQR(x,String(d.code||''),323,52,252,4);
+ text(d.code,295.5,339,559,41,18,'Arial',900,'center');
  return c;
 }
+
 function drawPasserelleFlag(c,d){
   // Passerelle 38 x 25 mm : toutes les informations au-dessus du pli.
   c.width=449; c.height=295;
@@ -2612,8 +2612,8 @@ function rememberRoll(barcode,format){if(!barcode)return false;const m=loadRollM
 function forgetRoll(barcode){if(!barcode)return;const m=loadRollMap();delete m[barcode];saveRollMap(m)}
 function recalledRoll(barcode){const r=loadRollMap()[barcode];return r&&typeof r==='object'?r.format:(typeof r==='string'?r:'')}
 function setRollBadge(kind,text){const b=el('rollBadge');b.className='badge '+kind;b.querySelector('span').textContent=text}
-function syncRollUI(){el('rPrinter').textContent=state.connected?(Niimbot.printer?.label||'NIIMBOT B1 Pro'):'Non connectée';el('rExpected').textContent=FORMAT_LABEL[state.format];el('rBarcode').textContent=state.rollBarcode||'—';el('rDetected').textContent=state.rollFormat?FORMAT_LABEL[state.rollFormat]:'—';el('btnResetRoll').style.display=state.rollBarcode&&state.rollFormat?'block':'none';if(state.rollGate==='forced')setRollBadge('warn','40 × 20 mm forcé • RFID ignoré');else if(state.rollGate==='ok')setRollBadge('ok','Rouleau compatible');else if(state.rollGate==='mismatch')setRollBadge('error','Incohérence : impression bloquée');else if(state.rollGate==='unknown')setRollBadge('warn','Nouveau rouleau : confirmation requise');else if(state.rollGate==='noroll')setRollBadge('warn','RFID non lisible : contrôle automatique impossible');else setRollBadge('warn','Contrôle en attente')}
-function sync(){const it=batchData();if(isCase){el('pageTitle').textContent='Impression étiquette mallette';el('pageSubtitle').textContent='NIIMBOT B1 Pro • QR unique • identifiant mallette • formats par type • standard ou drapeau';el('lType').textContent="Type d'identifiant";el('lModel').textContent='Rôle du code';el('lNumber').textContent='Affectation véhicule';el('lCode').textContent='Valeur du QR unique';el('vType').textContent='MALLETTE VÉHICULE';el('vModel').textContent='IDENTIFIANT PERMANENT';el('vNumber').textContent='À RENSEIGNER AU SCAN';el('vCode').textContent=state.code;el('modeField').style.display='none';el('btnBatch').style.display='none';el('btnPrint').textContent='CONTRÔLER & IMPRIMER LA MALLETTE';}else{el('vType').textContent=state.type||'—';el('vModel').textContent=state.model||'—';el('vNumber').textContent=state.mode==='batch'?`${state.first} → ${state.last}`:state.number||'—';el('vCode').textContent=state.mode==='batch'?`${it.length} codes matériels`:state.code||'—';el('singleBtn').classList.toggle('active',state.mode!=='batch');el('batchBtn').classList.toggle('active',state.mode==='batch');el('btnBatch').style.display=state.mode==='batch'?'block':'none';}el('format').value=state.format;el('format').disabled=state.formatLocked;el('copies').value=state.copies;el('actual').textContent=(isCase?'Mallette 40 × 20 mm':(state.format==='standard'?'Standard 40 × 20 mm':'Drapeau câble 38 × 25 mm • pli horizontal'))+' • taille réelle d’impression';render(state.mode==='batch'&&it.length?it[0]:data());document.querySelectorAll('[data-format]').forEach(b=>{b.classList.toggle('active',b.dataset.format===state.format);b.classList.toggle('locked',state.formatLocked);b.disabled=state.formatLocked});syncRollUI()}
+function syncRollUI(){el('rPrinter').textContent=state.connected?(Niimbot.printer?.label||'NIIMBOT B1 Pro'):'Non connectée';el('rExpected').textContent=FORMAT_LABEL[state.format];el('rBarcode').textContent=state.rollBarcode||'—';el('rDetected').textContent=state.rollFormat?FORMAT_LABEL[state.rollFormat]:'—';el('btnResetRoll').style.display=state.rollBarcode&&state.rollFormat?'block':'none';if(state.rollGate==='forced')setRollBadge('warn','50 × 30 mm forcé • RFID ignoré');else if(state.rollGate==='ok')setRollBadge('ok','Rouleau compatible');else if(state.rollGate==='mismatch')setRollBadge('error','Incohérence : impression bloquée');else if(state.rollGate==='unknown')setRollBadge('warn','Nouveau rouleau : confirmation requise');else if(state.rollGate==='noroll')setRollBadge('warn','RFID non lisible : contrôle automatique impossible');else setRollBadge('warn','Contrôle en attente')}
+function sync(){const it=batchData();if(isCase){el('pageTitle').textContent='Impression étiquette mallette';el('pageSubtitle').textContent='NIIMBOT B1 Pro • QR unique • identifiant mallette • formats par type • standard ou drapeau';el('lType').textContent="Type d'identifiant";el('lModel').textContent='Rôle du code';el('lNumber').textContent='Affectation véhicule';el('lCode').textContent='Valeur du QR unique';el('vType').textContent='MALLETTE VÉHICULE';el('vModel').textContent='IDENTIFIANT PERMANENT';el('vNumber').textContent='À RENSEIGNER AU SCAN';el('vCode').textContent=state.code;el('modeField').style.display='none';el('btnBatch').style.display='none';el('btnPrint').textContent='CONTRÔLER & IMPRIMER LA MALLETTE';}else{el('vType').textContent=state.type||'—';el('vModel').textContent=state.model||'—';el('vNumber').textContent=state.mode==='batch'?`${state.first} → ${state.last}`:state.number||'—';el('vCode').textContent=state.mode==='batch'?`${it.length} codes matériels`:state.code||'—';el('singleBtn').classList.toggle('active',state.mode!=='batch');el('batchBtn').classList.toggle('active',state.mode==='batch');el('btnBatch').style.display=state.mode==='batch'?'block':'none';}el('format').value=state.format;el('format').disabled=state.formatLocked;el('copies').value=state.copies;el('actual').textContent=(isCase?'Mallette 50 × 30 mm':(state.format==='standard'?'Standard 50 × 30 mm':'Drapeau câble 38 × 25 mm • pli horizontal'))+' • taille réelle d’impression';render(state.mode==='batch'&&it.length?it[0]:data());document.querySelectorAll('[data-format]').forEach(b=>{b.classList.toggle('active',b.dataset.format===state.format);b.classList.toggle('locked',state.formatLocked);b.disabled=state.formatLocked});syncRollUI()}
 function resetRollState(){state.connected=false;state.rfid=null;state.rollBarcode='';state.rollFormat='';state.rollGate='pending';syncRollUI()}
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 function isGattDisconnectError(e){
@@ -2665,7 +2665,7 @@ async function connectAndInspect(){
  const rfid=st&&st.decoded&&st.decoded.rfid;state.rfid=rfid||null;state.rollBarcode=(rfid&&rfid.barCode?String(rfid.barCode):'').trim();
  const known=state.rollBarcode?KNOWN_ROLL_FORMATS[state.rollBarcode]:'';
  if(known){rememberRoll(state.rollBarcode,known);state.rollFormat=known}else{state.rollFormat=state.rollBarcode?recalledRoll(state.rollBarcode):'';}
- if(state.forcePaper && state.format==='standard'){state.rollGate='forced';syncRollUI();status('Format 40 × 20 mm forcé. Contrôle de correspondance RFID ignoré.','warn');return{allowed:true,forced:true}}
+ if(state.forcePaper && state.format==='standard'){state.rollGate='forced';syncRollUI();status('Format 50 × 30 mm forcé. Contrôle de correspondance RFID ignoré.','warn');return{allowed:true,forced:true}}
  if(!state.rollBarcode){state.rollGate='noroll';syncRollUI();status('B1 Pro connectée. RFID du rouleau non disponible : contrôle automatique du format impossible.','warn');return{allowed:true,unverified:true}}
  if(!state.rollFormat){state.rollGate='unknown';syncRollUI();status(`Nouveau rouleau RFID ${state.rollBarcode}. Confirmation du format requise avant la première impression.`,'warn');return{allowed:false,unknown:true}}
  if(state.rollFormat!==state.format){state.rollGate='mismatch';syncRollUI();status(`ÉTIQUETTE INCOHÉRENTE — rouleau mémorisé : ${FORMAT_LABEL[state.rollFormat]} • attendu : ${FORMAT_LABEL[state.format]}. Utilisez « Oublier l'association » pour réaffecter ce rouleau si le papier est bien le bon.`,'error');return{allowed:false,mismatch:true}}
@@ -2681,7 +2681,7 @@ el('minus').onclick=()=>{state.copies=Math.max(1,state.copies-1);sync()};
 el('plus').onclick=()=>{state.copies=Math.min(20,state.copies+1);sync()};
 el('format').onchange=e=>{if(state.formatLocked)return;state.format=e.target.value;resetRollState();sync()};
 document.querySelectorAll('[data-format]').forEach(b=>b.onclick=()=>{if(state.formatLocked)return;state.format=b.dataset.format;resetRollState();sync()});
-el('forcePaper').onchange=e=>{state.forcePaper=e.target.checked;state.rollGate='pending';syncRollUI();status(state.forcePaper?'Forçage 40 × 20 mm activé.':'Contrôle du rouleau réactivé.',state.forcePaper?'warn':'')};
+el('forcePaper').onchange=e=>{state.forcePaper=e.target.checked;state.rollGate='pending';syncRollUI();status(state.forcePaper?'Forçage 50 × 30 mm activé.':'Contrôle du rouleau réactivé.',state.forcePaper?'warn':'')};
 el('btnPrint').onclick=()=>printCurrent(false);
 el('btnBatch').onclick=()=>printCurrent(true);
 el('btnReprint').onclick=reprint;
@@ -2712,7 +2712,7 @@ for(const [id,key] of [['vType','type'],['vModel','model'],['vNumber','number'],
 el('resetText').onclick=()=>{state.labelOverrides={};sync()};
 el('btnDownload').onclick=()=>{
  try{const d=state.mode==='batch'?(batchData()[0]||data()):data();render(d);
- const a=document.createElement('a');a.download=`${d.code.replace(/[^a-z0-9_-]/gi,'_')}_${state.format==='standard'?'40x20':'38x25'}.png`;a.href=el('labelCanvas').toDataURL('image/png');a.click();
+ const a=document.createElement('a');a.download=`${d.code.replace(/[^a-z0-9_-]/gi,'_')}_${state.format==='standard'?'50x30':'38x25'}.png`;a.href=el('labelCanvas').toDataURL('image/png');a.click();
  }catch(e){status(e.message,'error')}
 };
 sync();
