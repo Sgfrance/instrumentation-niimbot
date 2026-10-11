@@ -2384,6 +2384,7 @@ var qrcode = function() {
 <button class="primary" id="btnPrint">Contrôler & imprimer</button>
 <button class="secondary" id="btnReprint">Réimprimer</button>
 <button class="outline" id="btnDownload">Télécharger l’étiquette PNG</button><button class="outline" id="btnBatch">Imprimer le lot</button>
+<div class="rollbox" id="calibrationBox"><h3>Centrage • 40 × 20 mm</h3><div class="rollgrid"><div class="field"><label for="offsetX">Horizontal (mm)</label><input id="offsetX" type="number" min="-1" max="1" step="0.1" value="0"></div><div class="field"><label for="offsetY">Vertical (mm)</label><input id="offsetY" type="number" min="-1" max="1" step="0.1" value="0.5"></div></div><p class="note">Positif : vers la droite / vers le bas. Réglage mémorisé dans ce navigateur. Commencez par une seule étiquette ; ajustez par pas de 0,1 mm.</p><button class="mini" id="resetCalibration">Rétablir le centrage proposé</button></div>
 <div class="rollbox">
 <h3>Contrôle du rouleau</h3>
 <label style="display:flex;align-items:flex-start;gap:9px;font-size:13px;font-weight:700;line-height:1.4;margin-bottom:10px"><input id="forcePaper" type="checkbox" checked style="width:auto;flex:none;margin-top:3px">Forcer le format 40 × 20 mm</label>
@@ -2474,31 +2475,33 @@ function drawCase(c,d){
   x.textAlign='left';
   return c
 }
+const CALIBRATION_KEY='instrumentation:40x20:offset:v1';
+const calibration=(()=>{try{const c=JSON.parse(localStorage.getItem(CALIBRATION_KEY)||'null');if(c&&Number.isFinite(c.x)&&Number.isFinite(c.y))return{x:Math.max(-1,Math.min(1,c.x)),y:Math.max(-1,Math.min(1,c.y))}}catch(_){}return{x:0,y:0.5}})();
 function drawStandard(c,d){
- // 40 × 20 mm at 300 dpi; QR modules and four-module quiet zone stay intact.
  c.width=472;c.height=236;
  const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,472,236);
- function text(t,px,py,width,size,min=14,font='Arial',weight=700,align='left',color='#000'){
+ // Integer-pixel translation only: no resampling of QR modules.
+ x.save();x.translate(Math.round(calibration.x*300/25.4),Math.round(calibration.y*300/25.4));
+ function text(t,px,py,width,size,min=14,weight=700,align='left',color='#000'){
   x.fillStyle=color;x.textAlign=align;x.textBaseline='alphabetic';
-  const fs=fit(x,String(t),width,size,min,font);x.font=`${weight} ${fs}px ${font}`;
+  const fs=fit(x,String(t),width,size,min,'Arial');x.font=`${weight} ${fs}px Arial`;
   x.fillText(String(t),px,py,width);
  }
- rr(x,14,8,444,31,5,'#000');
- text('SEGULA TECHNOLOGIES',236,30,420,21,21,'Arial',900,'center','#fff');
- text(d.type||'MATÉRIEL',14,78,246,31,18);
- // Monochrome equipment badge, separate from the QR.
- rr(x,14,91,30,30,5,'#000');
- x.strokeStyle='#fff';x.lineWidth=2;x.strokeRect(22,99,14,14);
- for(const yy of [103,109]){x.beginPath();x.moveTo(18,yy);x.lineTo(22,yy);x.moveTo(36,yy);x.lineTo(40,yy);x.stroke()}
- text(d.model||'',53,119,207,35,18);
- text('N°',14,163,30,18,18);
- text(d.number||'—',50,168,210,46,18);
- text(d.extra||'',14,187,246,14,12,'Arial',600);
- drawQR(x,String(d.code||''),286,40,156,4);
- // White lettering on a solid footer, outside the QR's white square.
- rr(x,14,199,444,31,4,'#000');
- text(d.code,236,224,424,28,16,'Arial',900,'center','#fff');
- return c;
+ // Recessed header and footer keep printing away from the die-cut edges.
+ rr(x,18,20,436,24,5,'#000');
+ text('SEGULA TECHNOLOGIES',236,38,400,19,19,900,'center','#fff');
+ text(d.type||'MATÉRIEL',20,77,252,30,17,900);
+ rr(x,20,91,29,29,5,'#000');
+ x.strokeStyle='#fff';x.lineWidth=2;x.strokeRect(28,99,13,13);
+ for(const yy of [102,109]){x.beginPath();x.moveTo(24,yy);x.lineTo(28,yy);x.moveTo(41,yy);x.lineTo(45,yy);x.stroke()}
+ text(d.model||'',58,116,214,34,17,900);
+ text('N°',20,153,29,17,17);
+ text(d.number||'—',57,158,215,43,17,900);
+ text(d.extra||'',20,181,252,14,12,600);
+ drawQR(x,String(d.code||''),292,44,148,4);
+ rr(x,18,194,436,28,4,'#000');
+ text(d.code,236,216,410,24,16,900,'center','#fff');
+ x.restore();return c;
 }
 
 function drawPasserelleFlag(c,d){
@@ -2698,6 +2701,7 @@ batchData=()=>originalBatch().map(decorate);
 sync=()=>{
  try{
   originalSync();
+  el('calibrationBox').style.display=state.format==='standard'?'block':'none';
   const d=state.mode==='batch'?(batchData()[0]||data()):data();
   for(const [id,key] of [['vType','type'],['vModel','model'],['vNumber','number']]){
    if(document.activeElement!==el(id))el(id).value=d[key]||'';
@@ -2718,6 +2722,11 @@ el('btnDownload').onclick=()=>{
  const a=document.createElement('a');a.download=`${d.code.replace(/[^a-z0-9_-]/gi,'_')}_${state.format==='standard'?'40x20':'38x25'}.png`;a.href=el('labelCanvas').toDataURL('image/png');a.click();
  }catch(e){status(e.message,'error')}
 };
+function syncCalibrationInputs(){el('offsetX').value=calibration.x;el('offsetY').value=calibration.y}
+function saveCalibration(){try{localStorage.setItem(CALIBRATION_KEY,JSON.stringify(calibration))}catch(_){}syncCalibrationInputs();sync()}
+for(const [id,key] of [['offsetX','x'],['offsetY','y']])el(id).addEventListener('change',()=>{const n=Number(el(id).value);if(!Number.isFinite(n)){syncCalibrationInputs();return}calibration[key]=Math.round(Math.max(-1,Math.min(1,n))*10)/10;saveCalibration()});
+el('resetCalibration').onclick=()=>{calibration.x=0;calibration.y=0.5;saveCalibration()};
+syncCalibrationInputs();
 sync();
 
 </script>
