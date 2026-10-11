@@ -2419,7 +2419,7 @@ const requestedStyle=qs('style','').toLowerCase();
 const requestedMode=qs('mode','single').toLowerCase();
 const isCase=requestedMode==='case'||requestedMode==='mallette';
 function makeCaseCode(){const d=new Date(),p=n=>String(n).padStart(2,'0');return `MLT-${String(d.getFullYear()).slice(-2)}${p(d.getMonth()+1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}${p(d.getSeconds())}-${p(Math.floor(Math.random()*90)+10)}`}
-const state={type:qs('type',isCase?'MALLETTE VÉHICULE':'PASSERELLE').toUpperCase(),model:qs('model',isCase?'IDENTIFIANT PERMANENT':'A-7852').toUpperCase(),number:qs('number',isCase?'À RENSEIGNER AU SCAN':'58').toUpperCase(),code:qs('code',isCase?makeCaseCode():'PS-A-7852-58'),mode:requestedMode,prefix:qs('prefix','').toUpperCase(),first:qs('first',''),last:qs('last',''),digits:+qs('digits','0')||0,format:'standard',formatLocked:false,copies:1,lastJob:null,connected:false,rfid:null,rollBarcode:'',rollFormat:'',rollGate:'pending',forcePaper:true};
+const state={type:qs('type',isCase?'MALLETTE':'PASSERELLE').toUpperCase(),model:qs('model',isCase?'VÉHICULE':'A-7852').toUpperCase(),number:qs('number',isCase?'':'58').toUpperCase(),code:qs('code',isCase?makeCaseCode():'PS-A-7852-58'),mode:requestedMode,prefix:qs('prefix','').toUpperCase(),first:qs('first',''),last:qs('last',''),digits:+qs('digits','0')||0,format:'standard',formatLocked:false,copies:1,lastJob:null,connected:false,rfid:null,rollBarcode:'',rollFormat:'',rollGate:'pending',forcePaper:true};
 const STORAGE_KEY='instrumentation-niimbot:roll-format:40x20:v3';
 const KNOWN_ROLL_FORMATS={'040926195':'flag'};
 const el=id=>document.getElementById(id);
@@ -2496,15 +2496,17 @@ function drawStandard(c,d){
  x.fillRect(390,28,64,2);x.fillRect(422,34,32,2);
  rr(x,18,52,262,132,9,'#000');
  const extra=String(d.extra||'').trim();
+ x.font='700 22px Arial';
+ const singleExtra=!!extra&&x.measureText(extra).width<=235;
  text(d.type||'MATÉRIEL',31,extra?74:78,236,26,17,900,'left','#fff');
  x.fillStyle='#fff';x.fillRect(31,extra?82:88,28,3);x.fillRect(64,extra?83:89,202,1);
- text(d.model||'',31,extra?105:119,235,extra?29:34,17,900,'left','#fff');
- text('N°',31,extra?131:157,26,16,16,700,'left','#fff');
- text(d.number||'—',66,extra?134:160,200,extra?32:42,17,900,'left','#fff');
+ text(d.model||'',31,singleExtra?112:(extra?105:119),235,singleExtra?26:(extra?29:34),17,900,'left','#fff');
+ text('N°',31,singleExtra?143:(extra?131:157),26,16,16,700,'left','#fff');
+ text(d.number||'—',66,singleExtra?146:(extra?134:160),200,singleExtra?30:(extra?32:42),17,900,'left','#fff');
  if(extra){
   x.font='700 22px Arial';
   if(x.measureText(extra).width<=235){
-   text(extra,31,173,235,22,22,700,'left','#fff');
+   text(extra,31,176,235,22,22,700,'left','#fff');
   }else{
    // Choose a balanced two-line split; never discard the user's text.
    const words=extra.split(/\s+/);let lines=[extra,''],best=Infinity;
@@ -2630,7 +2632,7 @@ function drawFlagSource(c,d){
   return c;
 }
 function render(d){const p=el('labelCanvas');p.classList.toggle('flag-preview',state.format==='flag');if(state.format==='standard')drawStandard(p,d);else drawFlagSource(p,d);if(state.format==='standard')return p.toDataURL('image/png');/* La B1 Pro imprime physiquement le rouleau câble avec un quart de tour. On conserve l'aperçu horizontal 38×25, mais on pré-rotate le raster de -90° et on l'envoie en 25×38 afin que le texte sorte horizontal sur la partie drapeau. */const out=document.createElement('canvas');out.width=295;out.height=449;const o=out.getContext('2d');o.clearRect(0,0,295,449);o.save();o.translate(0,449);o.rotate(-Math.PI/2);o.drawImage(p,0,0);o.restore();return out.toDataURL('image/png')}
-function data(){return isCase?{type:'MALLETTE VÉHICULE',model:'IDENTIFIANT PERMANENT',number:'À RENSEIGNER AU SCAN',code:state.code}:{type:state.type,model:state.model,number:state.number,code:state.code}}
+function data(){return {type:state.type,model:state.model,number:state.number,code:state.code}}
 function status(t,k=''){const e=el('status');e.textContent=t;e.className='status '+k}
 function loadRollMap(){try{return JSON.parse(localStorage.getItem(STORAGE_KEY)||'{}')||{}}catch(_){return{}}}
 function saveRollMap(m){try{localStorage.setItem(STORAGE_KEY,JSON.stringify(m));return true}catch(_){return false}}
@@ -2639,7 +2641,7 @@ function forgetRoll(barcode){if(!barcode)return;const m=loadRollMap();delete m[b
 function recalledRoll(barcode){const r=loadRollMap()[barcode];return r&&typeof r==='object'?r.format:(typeof r==='string'?r:'')}
 function setRollBadge(kind,text){const b=el('rollBadge');b.className='badge '+kind;b.querySelector('span').textContent=text}
 function syncRollUI(){el('rPrinter').textContent=state.connected?(Niimbot.printer?.label||'NIIMBOT B1 Pro'):'Non connectée';el('rExpected').textContent=FORMAT_LABEL[state.format];el('rBarcode').textContent=state.rollBarcode||'—';el('rDetected').textContent=state.rollFormat?FORMAT_LABEL[state.rollFormat]:'—';el('btnResetRoll').style.display=state.rollBarcode&&state.rollFormat?'block':'none';if(state.rollGate==='forced')setRollBadge('warn','40 × 20 mm forcé • RFID ignoré');else if(state.rollGate==='ok')setRollBadge('ok','Rouleau compatible');else if(state.rollGate==='mismatch')setRollBadge('error','Incohérence : impression bloquée');else if(state.rollGate==='unknown')setRollBadge('warn','Nouveau rouleau : confirmation requise');else if(state.rollGate==='noroll')setRollBadge('warn','RFID non lisible : contrôle automatique impossible');else setRollBadge('warn','Contrôle en attente')}
-function sync(){const it=batchData();if(isCase){el('pageTitle').textContent='Impression étiquette mallette';el('pageSubtitle').textContent='NIIMBOT B1 Pro • QR unique • identifiant mallette • formats par type • standard ou drapeau';el('lType').textContent="Type d'identifiant";el('lModel').textContent='Rôle du code';el('lNumber').textContent='Affectation véhicule';el('lCode').textContent='Valeur du QR unique';el('vType').textContent='MALLETTE VÉHICULE';el('vModel').textContent='IDENTIFIANT PERMANENT';el('vNumber').textContent='À RENSEIGNER AU SCAN';el('vCode').textContent=state.code;el('modeField').style.display='none';el('btnBatch').style.display='none';el('btnPrint').textContent='CONTRÔLER & IMPRIMER LA MALLETTE';}else{el('vType').textContent=state.type||'—';el('vModel').textContent=state.model||'—';el('vNumber').textContent=state.mode==='batch'?`${state.first} → ${state.last}`:state.number||'—';el('vCode').textContent=state.mode==='batch'?`${it.length} codes matériels`:state.code||'—';el('singleBtn').classList.toggle('active',state.mode!=='batch');el('batchBtn').classList.toggle('active',state.mode==='batch');el('btnBatch').style.display=state.mode==='batch'?'block':'none';}el('format').value=state.format;el('format').disabled=state.formatLocked;el('copies').value=state.copies;el('actual').textContent=(state.format==='standard'?'Standard 40 × 20 mm':'Drapeau câble 38 × 25 mm • pli horizontal')+' • taille réelle d’impression';render(state.mode==='batch'&&it.length?it[0]:data());document.querySelectorAll('[data-format]').forEach(b=>{b.classList.toggle('active',b.dataset.format===state.format);b.classList.toggle('locked',state.formatLocked);b.disabled=state.formatLocked});syncRollUI()}
+function sync(){const it=batchData();if(isCase){el('pageTitle').textContent='Impression étiquette mallette';el('pageSubtitle').textContent='NIIMBOT B1 Pro • QR unique • identifiant mallette • formats par type • standard ou drapeau';el('lType').textContent='Type de matériel';el('lModel').textContent='Modèle / désignation';el('lNumber').textContent='Numéro de mallette';el('lCode').textContent='Valeur du QR unique';el('vType').textContent='MALLETTE VÉHICULE';el('vModel').textContent='IDENTIFIANT PERMANENT';el('vNumber').textContent='À RENSEIGNER AU SCAN';el('vCode').textContent=state.code;el('modeField').style.display='none';el('btnBatch').style.display='none';el('btnPrint').textContent='CONTRÔLER & IMPRIMER LA MALLETTE';}else{el('vType').textContent=state.type||'—';el('vModel').textContent=state.model||'—';el('vNumber').textContent=state.mode==='batch'?`${state.first} → ${state.last}`:state.number||'—';el('vCode').textContent=state.mode==='batch'?`${it.length} codes matériels`:state.code||'—';el('singleBtn').classList.toggle('active',state.mode!=='batch');el('batchBtn').classList.toggle('active',state.mode==='batch');el('btnBatch').style.display=state.mode==='batch'?'block':'none';}el('format').value=state.format;el('format').disabled=state.formatLocked;el('copies').value=state.copies;el('actual').textContent=(state.format==='standard'?'Standard 40 × 20 mm':'Drapeau câble 38 × 25 mm • pli horizontal')+' • taille réelle d’impression';render(state.mode==='batch'&&it.length?it[0]:data());document.querySelectorAll('[data-format]').forEach(b=>{b.classList.toggle('active',b.dataset.format===state.format);b.classList.toggle('locked',state.formatLocked);b.disabled=state.formatLocked});syncRollUI()}
 function resetRollState(){state.connected=false;state.rfid=null;state.rollBarcode='';state.rollFormat='';state.rollGate='pending';syncRollUI()}
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 function isGattDisconnectError(e){
