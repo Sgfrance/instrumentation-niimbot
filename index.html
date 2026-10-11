@@ -2487,20 +2487,25 @@ function drawStandard(c,d){
   const fs=fit(x,String(t),width,size,min,'Arial');x.font=`${weight} ${fs}px Arial`;
   x.fillText(String(t),px,py,width);
  }
- // Recessed header and footer keep printing away from the die-cut edges.
- rr(x,18,20,436,24,5,'#000');
- text('SEGULA TECHNOLOGIES',236,38,400,19,19,900,'center','#fff');
- text(d.type||'MATÉRIEL',20,77,252,30,17,900);
- rr(x,20,91,29,29,5,'#000');
- x.strokeStyle='#fff';x.lineWidth=2;x.strokeRect(28,99,13,13);
- for(const yy of [102,109]){x.beginPath();x.moveTo(24,yy);x.lineTo(28,yy);x.moveTo(41,yy);x.lineTo(45,yy);x.stroke()}
- text(d.model||'',58,116,214,34,17,900);
- text('N°',20,153,29,17,17);
- text(d.number||'—',57,158,215,43,17,900);
- text(d.extra||'',20,181,252,14,12,600);
- drawQR(x,String(d.code||''),292,44,148,4);
- rr(x,18,194,436,28,4,'#000');
- text(d.code,236,216,410,24,16,900,'center','#fff');
+ // Graphic signature and a solid equipment panel, with protected paper margins.
+ x.fillStyle='#000';
+ for(const left of [22,34,46]){x.beginPath();x.moveTo(left,36);x.lineTo(left+8,22);x.lineTo(left+13,22);x.lineTo(left+5,36);x.closePath();x.fill()}
+ text('SEGULA',72,38,124,25,25,900);
+ text('TECHNOLOGIES',204,36,179,17,17,700);
+ x.fillRect(390,28,64,2);x.fillRect(422,34,32,2);
+ rr(x,18,52,262,132,9,'#000');
+ text(d.type||'MATÉRIEL',31,78,236,26,17,900,'left','#fff');
+ x.fillStyle='#fff';x.fillRect(31,88,28,3);x.fillRect(64,89,202,1);
+ text(d.model||'',31,119,235,34,17,900,'left','#fff');
+ text('N°',31,157,26,16,16,700,'left','#fff');
+ text(d.number||'—',66,160,200,42,17,900,'left','#fff');
+ text(d.extra||'',31,177,235,12,11,600,'left','#fff');
+ // QR remains black on pure white; ornamentation stays outside its quiet zone.
+ drawQR(x,String(d.code||''),298,45,148,4);
+ x.strokeStyle='#000';x.lineWidth=2;
+ for(const [cx,cy,sx,sy] of [[295,51,1,1],[449,51,-1,1],[295,183,1,-1],[449,183,-1,-1]]){x.beginPath();x.moveTo(cx+9*sx,cy);x.lineTo(cx,cy);x.lineTo(cx,cy+9*sy);x.stroke()}
+ rr(x,18,194,436,28,5,'#000');
+ text(d.code,236,216,390,24,16,900,'center','#fff');
  x.restore();return c;
 }
 
