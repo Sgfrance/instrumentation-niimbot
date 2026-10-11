@@ -2373,7 +2373,7 @@ var qrcode = function() {
 <div class="field" id="fModel"><label id="lModel">Modèle</label><input id="vModel" maxlength="60" aria-label="Model" autocomplete="off"></div>
 <div class="field" id="fNumber"><label id="lNumber">Numéro / plage</label><input id="vNumber" maxlength="60" aria-label="Number" autocomplete="off"></div>
 <div class="field" id="fCode"><label id="lCode">Code matériel / valeur scannée</label><input id="vCode" maxlength="120" aria-label="Code matériel et QR" autocomplete="off"><p class="note" id="codeHelp">Le QR contient exactement le code saisi.</p></div>
-<div class="field"><label for="extraText">Texte complémentaire (facultatif)</label><input id="extraText" maxlength="60" placeholder="Ex. Atelier instrumentation"></div><button type="button" class="mini" id="resetText">Rétablir les textes du matériel</button><p class="note">Toutes les informations sont modifiables pour cette impression. Modifier le code modifie aussi le QR ; le stock SharePoint reste inchangé.</p><div class="field"><label>Format d’étiquette</label><select id="format"><option value="standard">Standard 40 × 20 mm • par défaut</option><option value="flag">Drapeau câble 38 × 25 mm • pli horizontal</option></select></div>
+<div class="field"><label for="extraText">Texte complémentaire (facultatif)</label><input id="extraText" maxlength="60" placeholder="Ex. Atelier instrumentation" aria-describedby="extraHelp"></div><p class="note" id="extraHelp">Texte complémentaire en gras, sur une ou deux lignes. Une mention courte reste plus lisible.</p><button type="button" class="mini" id="resetText">Rétablir les textes du matériel</button><p class="note">Toutes les informations sont modifiables pour cette impression. Modifier le code modifie aussi le QR ; le stock SharePoint reste inchangé.</p><div class="field"><label>Format d’étiquette</label><select id="format"><option value="standard">Standard 40 × 20 mm • par défaut</option><option value="flag">Drapeau câble 38 × 25 mm • pli horizontal</option></select></div>
 <div class="field" id="modeField"><label>Mode d'impression</label><div class="seg"><button id="singleBtn">Individuel</button><button id="batchBtn">Série</button></div></div>
 <div class="field"><label>Nombre d'exemplaires</label><div class="copyrow"><button id="minus">−</button><input id="copies" value="1" readonly><button id="plus">+</button></div></div>
 <div class="status" id="status">Prêt. La B1 Pro sera contrôlée avant l'impression.</div>
@@ -2495,12 +2495,26 @@ function drawStandard(c,d){
  text('TECHNOLOGIES',204,36,179,17,17,700);
  x.fillRect(390,28,64,2);x.fillRect(422,34,32,2);
  rr(x,18,52,262,132,9,'#000');
- text(d.type||'MATÉRIEL',31,78,236,26,17,900,'left','#fff');
- x.fillStyle='#fff';x.fillRect(31,88,28,3);x.fillRect(64,89,202,1);
- text(d.model||'',31,119,235,34,17,900,'left','#fff');
- text('N°',31,157,26,16,16,700,'left','#fff');
- text(d.number||'—',66,160,200,42,17,900,'left','#fff');
- text(d.extra||'',31,177,235,12,11,600,'left','#fff');
+ const extra=String(d.extra||'').trim();
+ text(d.type||'MATÉRIEL',31,extra?74:78,236,26,17,900,'left','#fff');
+ x.fillStyle='#fff';x.fillRect(31,extra?82:88,28,3);x.fillRect(64,extra?83:89,202,1);
+ text(d.model||'',31,extra?105:119,235,extra?29:34,17,900,'left','#fff');
+ text('N°',31,extra?131:157,26,16,16,700,'left','#fff');
+ text(d.number||'—',66,extra?134:160,200,extra?32:42,17,900,'left','#fff');
+ if(extra){
+  x.font='700 22px Arial';
+  if(x.measureText(extra).width<=235){
+   text(extra,31,173,235,22,22,700,'left','#fff');
+  }else{
+   // Choose a balanced two-line split; never discard the user's text.
+   const words=extra.split(/\s+/);let lines=[extra,''],best=Infinity;
+   if(words.length>1){for(let i=1;i<words.length;i++){const pair=[words.slice(0,i).join(' '),words.slice(i).join(' ')];const width=Math.max(...pair.map(t=>x.measureText(t).width));if(width<best){best=width;lines=pair}}}
+   else {const mid=Math.ceil(extra.length/2);lines=[extra.slice(0,mid),extra.slice(mid)]}
+   const fs=Math.min(...lines.map(t=>fit(x,t,235,20,16,'Arial')));
+   text(lines[0],31,157,235,fs,fs,700,'left','#fff');
+   text(lines[1],31,178,235,fs,fs,700,'left','#fff');
+  }
+ }
  // QR remains black on pure white; ornamentation stays outside its quiet zone.
  drawQR(x,String(d.code||''),292,38,156,4,true);
  x.strokeStyle='#000';x.lineWidth=2;
