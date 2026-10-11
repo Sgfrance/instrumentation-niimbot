@@ -2372,8 +2372,8 @@ var qrcode = function() {
 <div class="field" id="fType"><label id="lType">Type de matériel</label><input id="vType" maxlength="60" aria-label="Type" autocomplete="off"></div>
 <div class="field" id="fModel"><label id="lModel">Modèle</label><input id="vModel" maxlength="60" aria-label="Model" autocomplete="off"></div>
 <div class="field" id="fNumber"><label id="lNumber">Numéro / plage</label><input id="vNumber" maxlength="60" aria-label="Number" autocomplete="off"></div>
-<div class="field" id="fCode"><label id="lCode">Code matériel / valeur scannée</label><div id="vCode" class="value">—</div></div>
-<div class="field"><label for="extraText">Texte complémentaire (facultatif)</label><input id="extraText" maxlength="60" placeholder="Ex. Atelier instrumentation"></div><button type="button" class="mini" id="resetText">Rétablir les textes du matériel</button><p class="note">Les textes sont modifiables pour cette impression. Le code du QR reste celui du matériel référencé ; aucune modification du stock.</p><div class="field"><label>Format d’étiquette</label><select id="format"><option value="flag">Drapeau câble 38 × 25 mm • pli horizontal</option><option value="standard">Standard 40 × 20 mm • tous matériels</option></select></div>
+<div class="field" id="fCode"><label id="lCode">Code matériel / valeur scannée</label><input id="vCode" maxlength="120" aria-label="Code matériel et QR" autocomplete="off"><p class="note" id="codeHelp">Le QR contient exactement le code saisi.</p></div>
+<div class="field"><label for="extraText">Texte complémentaire (facultatif)</label><input id="extraText" maxlength="60" placeholder="Ex. Atelier instrumentation"></div><button type="button" class="mini" id="resetText">Rétablir les textes du matériel</button><p class="note">Toutes les informations sont modifiables pour cette impression. Modifier le code modifie aussi le QR ; le stock SharePoint reste inchangé.</p><div class="field"><label>Format d’étiquette</label><select id="format"><option value="standard">Standard 40 × 20 mm • par défaut</option><option value="flag">Drapeau câble 38 × 25 mm • pli horizontal</option></select></div>
 <div class="field" id="modeField"><label>Mode d'impression</label><div class="seg"><button id="singleBtn">Individuel</button><button id="batchBtn">Série</button></div></div>
 <div class="field"><label>Nombre d'exemplaires</label><div class="copyrow"><button id="minus">−</button><input id="copies" value="1" readonly><button id="plus">+</button></div></div>
 <div class="status" id="status">Prêt. La B1 Pro sera contrôlée avant l'impression.</div>
@@ -2419,7 +2419,7 @@ const requestedStyle=qs('style','').toLowerCase();
 const requestedMode=qs('mode','single').toLowerCase();
 const isCase=requestedMode==='case'||requestedMode==='mallette';
 function makeCaseCode(){const d=new Date(),p=n=>String(n).padStart(2,'0');return `MLT-${String(d.getFullYear()).slice(-2)}${p(d.getMonth()+1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}${p(d.getSeconds())}-${p(Math.floor(Math.random()*90)+10)}`}
-const state={type:qs('type',isCase?'MALLETTE VÉHICULE':'PASSERELLE').toUpperCase(),model:qs('model',isCase?'IDENTIFIANT PERMANENT':'A-7852').toUpperCase(),number:qs('number',isCase?'À RENSEIGNER AU SCAN':'58').toUpperCase(),code:qs('code',isCase?makeCaseCode():'PS-A-7852-58'),mode:requestedMode,prefix:qs('prefix','').toUpperCase(),first:qs('first',''),last:qs('last',''),digits:+qs('digits','0')||0,format:!isCase&&requestedStyle==='flag'?'flag':'standard',formatLocked:isCase,copies:1,lastJob:null,connected:false,rfid:null,rollBarcode:'',rollFormat:'',rollGate:'pending',forcePaper:true};
+const state={type:qs('type',isCase?'MALLETTE VÉHICULE':'PASSERELLE').toUpperCase(),model:qs('model',isCase?'IDENTIFIANT PERMANENT':'A-7852').toUpperCase(),number:qs('number',isCase?'À RENSEIGNER AU SCAN':'58').toUpperCase(),code:qs('code',isCase?makeCaseCode():'PS-A-7852-58'),mode:requestedMode,prefix:qs('prefix','').toUpperCase(),first:qs('first',''),last:qs('last',''),digits:+qs('digits','0')||0,format:'standard',formatLocked:false,copies:1,lastJob:null,connected:false,rfid:null,rollBarcode:'',rollFormat:'',rollGate:'pending',forcePaper:true};
 const STORAGE_KEY='instrumentation-niimbot:roll-format:40x20:v3';
 const KNOWN_ROLL_FORMATS={'040926195':'flag'};
 const el=id=>document.getElementById(id);
@@ -2428,7 +2428,7 @@ function computedCode(num){if(state.code&&state.mode!=='batch')return state.code
 if(!state.code)state.code=computedCode(state.number);
 function batchData(){if(!state.first||!state.last)return[];const a=+state.first,b=+state.last;if(!Number.isSafeInteger(a)||!Number.isSafeInteger(b)||a<0||b<a||b-a>=200)return[];const digs=state.digits||Math.max(state.first.length,state.last.length),out=[];for(let n=a;n<=b;n++){const num=String(n).padStart(digs,'0');out.push({type:state.type,model:state.model,number:num,code:computedCode(num)})}return out}
 function fit(ctx,t,w,s,min=10,font='Segoe UI'){for(;s>min;s--){ctx.font=`900 ${s}px ${font}`;if(ctx.measureText(t).width<=w)return s}return min}
-function drawQR(ctx,text,x,y,size,minCell=2){
+function drawQR(ctx,text,x,y,size,minCell=2,fillSpace=false){
   try{
     const qr=qrcode(0,'M');
     qr.addData(String(text||''),/^[0-9A-Z $%*+./:\-]+$/.test(String(text||''))?'Alphanumeric':'Byte');
@@ -2436,7 +2436,7 @@ function drawQR(ctx,text,x,y,size,minCell=2){
     const n=qr.getModuleCount();
     const quiet=4;
     const total=n+quiet*2;
-    const cell=Math.floor(size/total);if(cell<minCell)throw Error('Code trop long pour un QR lisible sur cette étiquette.');
+    const cell=fillSpace?size/total:Math.floor(size/total);if(Math.floor(cell)<minCell)throw Error('Code trop long pour un QR lisible sur cette étiquette.');
     const real=cell*total;
     const ox=Math.round(x+(size-real)/2), oy=Math.round(y+(size-real)/2);
     ctx.save();
@@ -2447,7 +2447,8 @@ function drawQR(ctx,text,x,y,size,minCell=2){
     for(let r=0;r<n;r++){
       for(let c=0;c<n;c++){
         if(qr.isDark(r,c)){
-          ctx.fillRect(ox+(c+quiet)*cell,oy+(r+quiet)*cell,cell,cell);
+          const left=Math.round(ox+(c+quiet)*cell),top=Math.round(oy+(r+quiet)*cell);
+          ctx.fillRect(left,top,Math.round(ox+(c+quiet+1)*cell)-left,Math.round(oy+(r+quiet+1)*cell)-top);
         }
       }
     }
@@ -2501,9 +2502,9 @@ function drawStandard(c,d){
  text(d.number||'—',66,160,200,42,17,900,'left','#fff');
  text(d.extra||'',31,177,235,12,11,600,'left','#fff');
  // QR remains black on pure white; ornamentation stays outside its quiet zone.
- drawQR(x,String(d.code||''),298,45,148,4);
+ drawQR(x,String(d.code||''),292,38,156,4,true);
  x.strokeStyle='#000';x.lineWidth=2;
- for(const [cx,cy,sx,sy] of [[295,51,1,1],[449,51,-1,1],[295,183,1,-1],[449,183,-1,-1]]){x.beginPath();x.moveTo(cx+9*sx,cy);x.lineTo(cx,cy);x.lineTo(cx,cy+9*sy);x.stroke()}
+ for(const [cx,cy,sx,sy] of [[289,40,1,1],[451,40,-1,1],[289,192,1,-1],[451,192,-1,-1]]){x.beginPath();x.moveTo(cx+9*sx,cy);x.lineTo(cx,cy);x.lineTo(cx,cy+9*sy);x.stroke()}
  rr(x,18,194,436,28,5,'#000');
  text(d.code,236,216,390,24,16,900,'center','#fff');
  x.restore();return c;
@@ -2515,7 +2516,7 @@ function drawPasserelleFlag(c,d){
   const x=c.getContext('2d');
   const model=String(d.model||'—').toUpperCase();
   const num=String(d.number||'—').toUpperCase();
-  const code=String(d.code||'ID').toUpperCase();
+  const code=String(d.code||'ID');
   x.fillStyle='#fff'; x.fillRect(0,0,c.width,c.height);
   // Le QR conserve les quatre modules blancs nécessaires à sa lecture.
   drawQR(x,code,0,0,146);
@@ -2545,7 +2546,7 @@ function drawFlagSource(c,d){
   const type=(d.type||'MATÉRIEL').toUpperCase();
   const model=(d.model||'—').toUpperCase();
   const num=(d.number||'—').toUpperCase();
-  const code=(d.code||'ID').toUpperCase();
+  const code=String(d.code||'ID');
 
   x.clearRect(0,0,c.width,c.height);
   x.fillStyle='#fff';
@@ -2614,7 +2615,7 @@ function drawFlagSource(c,d){
 
   return c;
 }
-function render(d){const p=el('labelCanvas');p.classList.toggle('flag-preview',!isCase&&state.format==='flag');if(isCase||state.format==='standard')drawStandard(p,d);else drawFlagSource(p,d);if(isCase||state.format==='standard')return p.toDataURL('image/png');/* La B1 Pro imprime physiquement le rouleau câble avec un quart de tour. On conserve l'aperçu horizontal 38×25, mais on pré-rotate le raster de -90° et on l'envoie en 25×38 afin que le texte sorte horizontal sur la partie drapeau. */const out=document.createElement('canvas');out.width=295;out.height=449;const o=out.getContext('2d');o.clearRect(0,0,295,449);o.save();o.translate(0,449);o.rotate(-Math.PI/2);o.drawImage(p,0,0);o.restore();return out.toDataURL('image/png')}
+function render(d){const p=el('labelCanvas');p.classList.toggle('flag-preview',state.format==='flag');if(state.format==='standard')drawStandard(p,d);else drawFlagSource(p,d);if(state.format==='standard')return p.toDataURL('image/png');/* La B1 Pro imprime physiquement le rouleau câble avec un quart de tour. On conserve l'aperçu horizontal 38×25, mais on pré-rotate le raster de -90° et on l'envoie en 25×38 afin que le texte sorte horizontal sur la partie drapeau. */const out=document.createElement('canvas');out.width=295;out.height=449;const o=out.getContext('2d');o.clearRect(0,0,295,449);o.save();o.translate(0,449);o.rotate(-Math.PI/2);o.drawImage(p,0,0);o.restore();return out.toDataURL('image/png')}
 function data(){return isCase?{type:'MALLETTE VÉHICULE',model:'IDENTIFIANT PERMANENT',number:'À RENSEIGNER AU SCAN',code:state.code}:{type:state.type,model:state.model,number:state.number,code:state.code}}
 function status(t,k=''){const e=el('status');e.textContent=t;e.className='status '+k}
 function loadRollMap(){try{return JSON.parse(localStorage.getItem(STORAGE_KEY)||'{}')||{}}catch(_){return{}}}
@@ -2624,7 +2625,7 @@ function forgetRoll(barcode){if(!barcode)return;const m=loadRollMap();delete m[b
 function recalledRoll(barcode){const r=loadRollMap()[barcode];return r&&typeof r==='object'?r.format:(typeof r==='string'?r:'')}
 function setRollBadge(kind,text){const b=el('rollBadge');b.className='badge '+kind;b.querySelector('span').textContent=text}
 function syncRollUI(){el('rPrinter').textContent=state.connected?(Niimbot.printer?.label||'NIIMBOT B1 Pro'):'Non connectée';el('rExpected').textContent=FORMAT_LABEL[state.format];el('rBarcode').textContent=state.rollBarcode||'—';el('rDetected').textContent=state.rollFormat?FORMAT_LABEL[state.rollFormat]:'—';el('btnResetRoll').style.display=state.rollBarcode&&state.rollFormat?'block':'none';if(state.rollGate==='forced')setRollBadge('warn','40 × 20 mm forcé • RFID ignoré');else if(state.rollGate==='ok')setRollBadge('ok','Rouleau compatible');else if(state.rollGate==='mismatch')setRollBadge('error','Incohérence : impression bloquée');else if(state.rollGate==='unknown')setRollBadge('warn','Nouveau rouleau : confirmation requise');else if(state.rollGate==='noroll')setRollBadge('warn','RFID non lisible : contrôle automatique impossible');else setRollBadge('warn','Contrôle en attente')}
-function sync(){const it=batchData();if(isCase){el('pageTitle').textContent='Impression étiquette mallette';el('pageSubtitle').textContent='NIIMBOT B1 Pro • QR unique • identifiant mallette • formats par type • standard ou drapeau';el('lType').textContent="Type d'identifiant";el('lModel').textContent='Rôle du code';el('lNumber').textContent='Affectation véhicule';el('lCode').textContent='Valeur du QR unique';el('vType').textContent='MALLETTE VÉHICULE';el('vModel').textContent='IDENTIFIANT PERMANENT';el('vNumber').textContent='À RENSEIGNER AU SCAN';el('vCode').textContent=state.code;el('modeField').style.display='none';el('btnBatch').style.display='none';el('btnPrint').textContent='CONTRÔLER & IMPRIMER LA MALLETTE';}else{el('vType').textContent=state.type||'—';el('vModel').textContent=state.model||'—';el('vNumber').textContent=state.mode==='batch'?`${state.first} → ${state.last}`:state.number||'—';el('vCode').textContent=state.mode==='batch'?`${it.length} codes matériels`:state.code||'—';el('singleBtn').classList.toggle('active',state.mode!=='batch');el('batchBtn').classList.toggle('active',state.mode==='batch');el('btnBatch').style.display=state.mode==='batch'?'block':'none';}el('format').value=state.format;el('format').disabled=state.formatLocked;el('copies').value=state.copies;el('actual').textContent=(isCase?'Mallette 40 × 20 mm':(state.format==='standard'?'Standard 40 × 20 mm':'Drapeau câble 38 × 25 mm • pli horizontal'))+' • taille réelle d’impression';render(state.mode==='batch'&&it.length?it[0]:data());document.querySelectorAll('[data-format]').forEach(b=>{b.classList.toggle('active',b.dataset.format===state.format);b.classList.toggle('locked',state.formatLocked);b.disabled=state.formatLocked});syncRollUI()}
+function sync(){const it=batchData();if(isCase){el('pageTitle').textContent='Impression étiquette mallette';el('pageSubtitle').textContent='NIIMBOT B1 Pro • QR unique • identifiant mallette • formats par type • standard ou drapeau';el('lType').textContent="Type d'identifiant";el('lModel').textContent='Rôle du code';el('lNumber').textContent='Affectation véhicule';el('lCode').textContent='Valeur du QR unique';el('vType').textContent='MALLETTE VÉHICULE';el('vModel').textContent='IDENTIFIANT PERMANENT';el('vNumber').textContent='À RENSEIGNER AU SCAN';el('vCode').textContent=state.code;el('modeField').style.display='none';el('btnBatch').style.display='none';el('btnPrint').textContent='CONTRÔLER & IMPRIMER LA MALLETTE';}else{el('vType').textContent=state.type||'—';el('vModel').textContent=state.model||'—';el('vNumber').textContent=state.mode==='batch'?`${state.first} → ${state.last}`:state.number||'—';el('vCode').textContent=state.mode==='batch'?`${it.length} codes matériels`:state.code||'—';el('singleBtn').classList.toggle('active',state.mode!=='batch');el('batchBtn').classList.toggle('active',state.mode==='batch');el('btnBatch').style.display=state.mode==='batch'?'block':'none';}el('format').value=state.format;el('format').disabled=state.formatLocked;el('copies').value=state.copies;el('actual').textContent=(state.format==='standard'?'Standard 40 × 20 mm':'Drapeau câble 38 × 25 mm • pli horizontal')+' • taille réelle d’impression';render(state.mode==='batch'&&it.length?it[0]:data());document.querySelectorAll('[data-format]').forEach(b=>{b.classList.toggle('active',b.dataset.format===state.format);b.classList.toggle('locked',state.formatLocked);b.disabled=state.formatLocked});syncRollUI()}
 function resetRollState(){state.connected=false;state.rfid=null;state.rollBarcode='';state.rollFormat='';state.rollGate='pending';syncRollUI()}
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 function isGattDisconnectError(e){
@@ -2684,8 +2685,8 @@ async function connectAndInspect(){
 
 async function approveUnknownRoll(){if(!state.rollBarcode)return true;const ok=confirm(`Nouveau rouleau détecté (${state.rollBarcode}).\n\nConfirmez-vous qu'il s'agit bien du format : ${FORMAT_LABEL[state.format]} ?\n\nOK = mémoriser ce rouleau et continuer l'impression.`);if(!ok)return false;if(!rememberRoll(state.rollBarcode,state.format)){status('Impossible de mémoriser ce rouleau dans le navigateur. Impression annulée pour sécurité.','error');return false}state.rollFormat=state.format;state.rollGate='ok';syncRollUI();return true}
 async function ensureCompatible(){const check=await connectAndInspect();if(check.mismatch)throw Error(`Impression bloquée : rouleau ${FORMAT_LABEL[state.rollFormat]} incompatible avec ${FORMAT_LABEL[state.format]}.`);if(check.unknown){if(!await approveUnknownRoll())throw Error('Impression annulée : format du nouveau rouleau non confirmé.')}return true}
-async function printCurrent(forceBatch=false){try{const isBatch=forceBatch||state.mode==='batch',items=isBatch?batchData():[data()];if(!items.length)throw Error('Plage de numéros invalide.');const urls=[];for(const item of items)for(let n=0;n<state.copies;n++)urls.push(render(item));await ensureCompatible();status(`Impression de ${urls.length} étiquette(s)…`);const size=isCase?SIZE_CASE:(state.format==='standard'?SIZE_STD:SIZE_FLAG);await sendPrintRobust(urls,size);state.lastJob={items:[...items],copies:state.copies,format:state.format};el('lastText').textContent=`${urls.length} étiquette(s) • ${items[0].code}${items.length>1?' → '+items.at(-1).code:''}`;status('Impression terminée.','ok')}catch(e){console.error(e);const msg=isGattDisconnectError(e)?'Connexion Bluetooth perdue. Éteignez/rallumez la B1 Pro si nécessaire puis cliquez de nouveau sur « Contrôler & imprimer ».':(e.message||String(e));status(msg,'error')}}
-async function reprint(){if(!state.lastJob){status('Aucune impression précédente dans cette session.','error');return}try{const oldFormat=state.format;state.format=state.lastJob.format;sync();if(isCase)status(`Mallette prête : ${state.code}. Le QR / code identifie la mallette ; la contre-marque sera affectée dans l'application mobile.`,'ok');await ensureCompatible();const urls=[];for(const item of state.lastJob.items)for(let n=0;n<state.lastJob.copies;n++)urls.push(render(item));const size=isCase?SIZE_CASE:(state.lastJob.format==='standard'?SIZE_STD:SIZE_FLAG);await sendPrintRobust(urls,size);status('Réimpression terminée.','ok');state.format=oldFormat;sync()}catch(e){status(e.message||String(e),'error')}}
+async function printCurrent(forceBatch=false){try{const isBatch=forceBatch||state.mode==='batch',items=isBatch?batchData():[data()];if(!items.length)throw Error('Plage de numéros invalide.');const urls=[];for(const item of items)for(let n=0;n<state.copies;n++)urls.push(render(item));await ensureCompatible();status(`Impression de ${urls.length} étiquette(s)…`);const size=state.format==='standard'?SIZE_STD:SIZE_FLAG;await sendPrintRobust(urls,size);state.lastJob={items:[...items],copies:state.copies,format:state.format};el('lastText').textContent=`${urls.length} étiquette(s) • ${items[0].code}${items.length>1?' → '+items.at(-1).code:''}`;status('Impression terminée.','ok')}catch(e){console.error(e);const msg=isGattDisconnectError(e)?'Connexion Bluetooth perdue. Éteignez/rallumez la B1 Pro si nécessaire puis cliquez de nouveau sur « Contrôler & imprimer ».':(e.message||String(e));status(msg,'error')}}
+async function reprint(){if(!state.lastJob){status('Aucune impression précédente dans cette session.','error');return}try{const oldFormat=state.format;state.format=state.lastJob.format;sync();if(isCase)status(`Mallette prête : ${state.code}. Le QR / code identifie la mallette ; la contre-marque sera affectée dans l'application mobile.`,'ok');await ensureCompatible();const urls=[];for(const item of state.lastJob.items)for(let n=0;n<state.lastJob.copies;n++)urls.push(render(item));const size=state.lastJob.format==='standard'?SIZE_STD:SIZE_FLAG;await sendPrintRobust(urls,size);status('Réimpression terminée.','ok');state.format=oldFormat;sync()}catch(e){status(e.message||String(e),'error')}}
 el('singleBtn').onclick=()=>{if(isCase)return;state.mode='single';sync()};
 el('batchBtn').onclick=()=>{if(batchData().length)state.mode='batch';sync()};
 el('minus').onclick=()=>{state.copies=Math.max(1,state.copies-1);sync()};
@@ -2700,26 +2701,35 @@ el('btnResetRoll').onclick=()=>{if(!state.rollBarcode)return;if(confirm(`Oublier
 
 const originalData=data, originalBatch=batchData, originalSync=sync;
 state.labelOverrides={};
-function decorate(d){return {...d,...state.labelOverrides,code:d.code}}
+function decorate(d,series=false){
+ const o=state.labelOverrides,out={...d,...o};
+ if(series){
+  if(o.code!==undefined&&!o.code.includes('{numero}'))throw Error('En série, incluez {numero} dans le code pour garder un QR unique par matériel.');
+  for(const k of ['type','model','number','code','extra'])if(typeof out[k]==='string')out[k]=out[k].replaceAll('{numero}',d.number);
+ }
+ if(!String(out.code||'').trim())throw Error('Renseignez le code matériel pour générer le QR.');
+ return out;
+}
 data=()=>decorate(originalData());
-batchData=()=>originalBatch().map(decorate);
+batchData=()=>originalBatch().map(d=>decorate(d,state.mode==='batch'));
 sync=()=>{
  try{
   originalSync();
   el('calibrationBox').style.display=state.format==='standard'?'block':'none';
   const d=state.mode==='batch'?(batchData()[0]||data()):data();
-  for(const [id,key] of [['vType','type'],['vModel','model'],['vNumber','number']]){
-   if(document.activeElement!==el(id))el(id).value=d[key]||'';
+  for(const [id,key] of [['vType','type'],['vModel','model'],['vNumber','number'],['vCode','code']]){
+   if(document.activeElement!==el(id))el(id).value=state.labelOverrides[key]??(state.mode==='batch'&&key==='code'?'':d[key]||'');
   }
-  el('vNumber').disabled=state.mode==='batch';
-  el('vNumber').title=state.mode==='batch'?'Chaque étiquette conserve le numéro de sa série.':'';
-  el('vCode').textContent=state.mode==='batch'?`${batchData().length} codes uniques • aperçu : ${d.code}`:state.code;
+  el('vNumber').disabled=false;
+  el('vNumber').title=state.mode==='batch'?'Utilisez {numero} pour le numéro de chaque matériel.':'';
+  el('vCode').placeholder=state.mode==='batch'?'Automatique : code propre à chaque matériel':'';
+  el('codeHelp').textContent=state.mode==='batch'?'Pour personnaliser une série, incluez {numero} : ex. PS-A7852-{numero}. Le QR reste unique pour chaque numéro.':'Le QR contient exactement le code saisi.';
   el('extraText').value=state.labelOverrides.extra||'';
   el('btnDownload').disabled=false;
  }catch(e){status(e.message,'error');el('btnDownload').disabled=true}
 };
-for(const [id,key] of [['vType','type'],['vModel','model'],['vNumber','number'],['extraText','extra']]){
- el(id).addEventListener('input',()=>{state.labelOverrides[key]=el(id).value;sync()});
+for(const [id,key] of [['vType','type'],['vModel','model'],['vNumber','number'],['vCode','code'],['extraText','extra']]){
+ el(id).addEventListener('input',()=>{if(key==='code'&&state.mode==='batch'&&!el(id).value)delete state.labelOverrides.code;else state.labelOverrides[key]=el(id).value;sync()});
 }
 el('resetText').onclick=()=>{state.labelOverrides={};sync()};
 el('btnDownload').onclick=()=>{
