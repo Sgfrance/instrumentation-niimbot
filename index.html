@@ -2421,6 +2421,7 @@ const MODEL={label:'Niimbot B1 Pro',id:4097,dpi:300,protocol:'v4',task:'v4',dens
 const SIZE_FLAG={label:'Drapeau câble T25*38+40',code:'T25x38',w_mm:25,h_mm:38,w_px:295,h_px:449,margin:0,dpi:300}; // raster envoyé en portrait 25×38 pour compenser l'orientation physique B1 Pro
 const SIZE_STD={label:'Standard 40×20',code:'T40*20',w_mm:40,h_mm:20,w_px:472,h_px:236,margin:0,dpi:300};
 const SIZE_CASE={label:'Mallette 40×20',code:'T40*20',w_mm:40,h_mm:20,w_px:472,h_px:236,margin:0,dpi:300};
+function selectedFormat(value,type,model){const f=String(value||'').trim().toLowerCase();if(['flag','cable_38x25','drapeau'].includes(f))return 'flag';if(['standard','40x20','passerelle_38x25'].includes(f))return 'standard';return automaticFormat(type,model)}
 function automaticFormat(type,model){return String(type).trim().toUpperCase()==='PASSERELLE'&&['A7213','A5473'].includes(String(model).toUpperCase().replace(/[^A-Z0-9]/g,''))?'flag':'standard'}
 const requestedStyle=qs('style','').toLowerCase();
 const requestedMode=qs('mode','single').toLowerCase();
@@ -2431,7 +2432,7 @@ function makeCaseCode(){
  return 'MLT-'+Array.from(bytes,b=>alphabet[b&31]).join('');
 }
 function caseNumber(code){return String(code).replace(/^MLT-/i,'')}
-const state={type:qs('type',isCase?'MALLETTE':'PASSERELLE').toUpperCase(),model:qs('model',isCase?'IDENTIFIANT PERMANENT':'A-7852').toUpperCase(),number:qs('number',isCase?'':'58').toUpperCase(),code:qs('code',isCase?makeCaseCode():'PS-A-7852-58'),mode:requestedMode,prefix:qs('prefix','').toUpperCase(),first:qs('first',''),last:qs('last',''),digits:+qs('digits','0')||0,format:automaticFormat(qs('type',isCase?'MALLETTE':'PASSERELLE'),qs('model',isCase?'IDENTIFIANT PERMANENT':'A-7852')),formatLocked:false,copies:1,lastJob:null,connected:false,rfid:null,rollBarcode:'',rollFormat:'',rollGate:'pending',forcePaper:true};
+const state={type:qs('type',isCase?'MALLETTE':'PASSERELLE').toUpperCase(),model:qs('model',isCase?'IDENTIFIANT PERMANENT':'A-7852').toUpperCase(),number:qs('number',isCase?'':'58').toUpperCase(),code:qs('code',isCase?makeCaseCode():'PS-A-7852-58'),mode:requestedMode,prefix:qs('prefix','').toUpperCase(),first:qs('first',''),last:qs('last',''),digits:+qs('digits','0')||0,format:selectedFormat(qs('style',qs('format','')),qs('type',isCase?'MALLETTE':'PASSERELLE'),qs('model',isCase?'IDENTIFIANT PERMANENT':'A-7852')),formatLocked:false,copies:1,lastJob:null,connected:false,rfid:null,rollBarcode:'',rollFormat:'',rollGate:'pending',forcePaper:true};
 if(isCase){
  if(!state.code)state.code=makeCaseCode();
  state.number=caseNumber(state.code);
@@ -2790,7 +2791,7 @@ for(const [id,key] of [['vType','type'],['vModel','model'],['vNumber','number'],
  const value=el(id).value.trim();
  state.labelOverrides.code=key==='number'?(value?'MLT-'+value:''):value;
  state.labelOverrides.number=caseNumber(state.labelOverrides.code);
- }else if(key==='code'&&state.mode==='batch'&&!el(id).value)delete state.labelOverrides.code;else state.labelOverrides[key]=el(id).value;if(key==='type'||key==='model'){state.format=automaticFormat(state.labelOverrides.type??state.type,state.labelOverrides.model??state.model);resetRollState()}sync()});
+ }else if(key==='code'&&state.mode==='batch'&&!el(id).value)delete state.labelOverrides.code;else state.labelOverrides[key]=el(id).value;sync()});
 }
 el('resetText').onclick=()=>{state.labelOverrides={};sync()};
 el('btnDownload').onclick=()=>{
@@ -2812,24 +2813,24 @@ if(manifestMode){
   const seen=new Set();
   manifestItems=incoming.map(item=>{
    if(!item||typeof item!=='object')throw Error('Étiquette invalide.');
-   const d={type:String(item.type||''),model:String(item.model||''),number:String(item.number||''),code:String(item.code||''),extra:String(item.extra||'')};
+   const d={type:String(item.type||''),model:String(item.model||''),number:String(item.number||''),code:String(item.code||''),extra:String(item.extra||''),style:String(item.style||item.format||'')};
    if(!d.type.trim()||!d.code.trim()||d.code.length>120||seen.has(d.code))throw Error('Code vide, trop long ou répété dans le lot.');
    seen.add(d.code);return d;
   });
   // Validate QR capacity before sending any label to the printer.
-  for(const d of manifestItems){const canvas=document.createElement('canvas');if(automaticFormat(d.type,d.model)==='flag')drawFlagSource(canvas,d);else drawStandard(canvas,d)}
+  for(const d of manifestItems){const canvas=document.createElement('canvas');if(selectedFormat(d.style,d.type,d.model)==='flag')drawFlagSource(canvas,d);else drawStandard(canvas,d)}
  }catch(e){manifestItems=[];manifestError=e.message}
  const baseSync=sync,basePrint=printCurrent,baseReprint=reprint;
  data=()=>manifestItems[manifestIndex]||{type:'LOT INVALIDE',model:'',number:'',code:'ERREUR'};
  sync=()=>{
-  if(manifestItems.length)state.format=automaticFormat(data().type,data().model);
+  if(manifestItems.length)state.format=selectedFormat(data().style,data().type,data().model);
   baseSync();
   el('manifestPanel').style.display='block';
   el('pageTitle').textContent='Impression du planning';
   el('pageSubtitle').textContent='Identifiants enregistrés • lots séparés par rouleau';
   for(const id of ['vType','vModel','vNumber','vCode','extraText','format','minus','plus','resetText'])el(id).disabled=true;
   el('modeField').style.display='none';el('btnBatch').style.display='none';
-  const standard=manifestItems.filter(d=>automaticFormat(d.type,d.model)==='standard').length,flags=manifestItems.length-standard;
+  const standard=manifestItems.filter(d=>selectedFormat(d.style,d.type,d.model)==='standard').length,flags=manifestItems.length-standard;
   el('manifestSummary').textContent=`${manifestItems.length} étiquette(s) : ${standard} en 40 × 20 mm et ${flags} drapeau(x).`;
   el('printStandardLot').textContent=`Imprimer les 40 × 20 (${standard})`;
   el('printFlagLot').textContent=`Imprimer les drapeaux (${flags})`;
@@ -2841,7 +2842,7 @@ if(manifestMode){
  };
  async function printManifest(format){
   if(manifestBusy||manifestError)return;
-  const items=manifestItems.filter(d=>automaticFormat(d.type,d.model)===format);
+  const items=manifestItems.filter(d=>selectedFormat(d.style,d.type,d.model)===format);
   if(!items.length)return;
   manifestBusy=true;state.format=format;resetRollState();
   // Select an item of this format so the visible control matches the loaded roll.
@@ -2871,7 +2872,7 @@ if(manifestMode){
  el('printStandardLot').onclick=()=>printManifest('standard');
  el('printFlagLot').onclick=()=>printManifest('flag');
  const select=el('manifestPreview');
- manifestItems.forEach((d,i)=>{const o=document.createElement('option');o.value=String(i);o.textContent=d.type+' — '+d.code+' — '+(automaticFormat(d.type,d.model)==='flag'?'Drapeau':'40 × 20');select.appendChild(o)});
+ manifestItems.forEach((d,i)=>{const o=document.createElement('option');o.value=String(i);o.textContent=d.type+' — '+d.code+' — '+(selectedFormat(d.style,d.type,d.model)==='flag'?'Drapeau':'40 × 20');select.appendChild(o)});
  select.onchange=()=>{manifestIndex=Number(select.value)||0;resetRollState();sync()};
 }
 syncCalibrationInputs();
