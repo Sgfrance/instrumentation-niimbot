@@ -2384,7 +2384,7 @@ var qrcode = function() {
 <button class="primary" id="btnPrint">Contrôler & imprimer</button>
 <button class="secondary" id="btnReprint">Réimprimer</button>
 <button class="outline" id="btnDownload">Télécharger l’étiquette PNG</button><button class="outline" id="btnBatch">Imprimer le lot</button>
-<div class="rollbox" id="calibrationBox"><h3>Centrage • 40 × 20 mm</h3><div class="rollgrid"><div class="field"><label for="offsetX">Horizontal (mm)</label><input id="offsetX" type="number" min="-1" max="1" step="0.1" value="0"></div><div class="field"><label for="offsetY">Vertical (mm)</label><input id="offsetY" type="number" min="-1" max="1" step="0.1" value="0.5"></div></div><p class="note">Positif : vers la droite / vers le bas. Réglage mémorisé dans ce navigateur. Commencez par une seule étiquette ; ajustez par pas de 0,1 mm.</p><button class="mini" id="resetCalibration">Rétablir le centrage proposé</button></div>
+<div class="rollbox" id="calibrationBox"><h3>Centrage • 40 × 20 mm</h3><div class="rollgrid"><div class="field"><label for="offsetX">Horizontal (mm)</label><input id="offsetX" type="number" min="-1" max="1" step="0.1" value="0"></div><div class="field"><label for="offsetY">Vertical (mm)</label><input id="offsetY" type="number" min="-1" max="1" step="0.1" value="-0.6"></div></div><p class="note">Positif : vers la droite / vers le bas. Réglage mémorisé dans ce navigateur. Commencez par une seule étiquette ; ajustez par pas de 0,1 mm.</p><button class="mini" id="resetCalibration">Rétablir le centrage proposé</button></div>
 <div class="rollbox">
 <h3>Contrôle du rouleau</h3>
 <label style="display:flex;align-items:flex-start;gap:9px;font-size:13px;font-weight:700;line-height:1.4;margin-bottom:10px"><input id="forcePaper" type="checkbox" checked style="width:auto;flex:none;margin-top:3px">Forcer le format 40 × 20 mm</label>
@@ -2486,8 +2486,8 @@ function drawCase(c,d){
   x.textAlign='left';
   return c
 }
-const CALIBRATION_KEY='instrumentation:40x20:offset:v1';
-const calibration=(()=>{try{const c=JSON.parse(localStorage.getItem(CALIBRATION_KEY)||'null');if(c&&Number.isFinite(c.x)&&Number.isFinite(c.y))return{x:Math.max(-1,Math.min(1,c.x)),y:Math.max(-1,Math.min(1,c.y))}}catch(_){}return{x:0,y:0.5}})();
+const CALIBRATION_KEY='instrumentation:40x20:offset:v2';
+const calibration=(()=>{try{const c=JSON.parse(localStorage.getItem(CALIBRATION_KEY)||'null');if(c&&Number.isFinite(c.x)&&Number.isFinite(c.y))return{x:Math.max(-1,Math.min(1,c.x)),y:Math.max(-1,Math.min(1,c.y))}}catch(_){}return{x:0,y:-0.6}})();
 function drawStandard(c,d){
  c.width=472;c.height=236;
  const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,472,236);
@@ -2794,7 +2794,7 @@ el('btnDownload').onclick=()=>{
 function syncCalibrationInputs(){el('offsetX').value=calibration.x;el('offsetY').value=calibration.y}
 function saveCalibration(){try{localStorage.setItem(CALIBRATION_KEY,JSON.stringify(calibration))}catch(_){}syncCalibrationInputs();sync()}
 for(const [id,key] of [['offsetX','x'],['offsetY','y']])el(id).addEventListener('change',()=>{const n=Number(el(id).value);if(!Number.isFinite(n)){syncCalibrationInputs();return}calibration[key]=Math.round(Math.max(-1,Math.min(1,n))*10)/10;saveCalibration()});
-el('resetCalibration').onclick=()=>{calibration.x=0;calibration.y=0.5;saveCalibration()};
+el('resetCalibration').onclick=()=>{calibration.x=0;calibration.y=-0.6;saveCalibration()};
 syncCalibrationInputs();
 sync();
 
