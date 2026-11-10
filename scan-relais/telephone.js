@@ -30,6 +30,7 @@ async function api(path,body,captured=session,signal){
     const d=await r.json();if(!r.ok){const e=Error(d.error||'Relais indisponible');e.status=r.status;throw e}return d;
   }finally{if(timer)clearTimeout(timer)}
 }
+function lotVide(){return !batch.items.length&&!(task?.mode==='DEMONTAGE'&&batch.mallette)}
 function operateur(){return cleanOp($('operator')?.value||'')}
 function operateurRequis(){return !NAMES.includes(person)}
 function rememberOperateur(){const op=operateur();if(!op)return;store('inst-v12-operator-'+person,op);const list=[op,...(read('inst-v12-operators')||[]).filter(x=>x!==op)].slice(0,15);store('inst-v12-operators',list);fillOperators()}
@@ -49,7 +50,7 @@ function render(){
   $('task').hidden=!task||submitted;$('vehicle').textContent=task?.cm==='A-IDENTIFIER'?'Véhicule à identifier':'Véhicule '+(task?.cm||'');
   $('count').textContent=batch.items.length+' matériel(s)';$('caseNumber').textContent='Mallette : '+(batch.mallette||'—');
   $('scan').disabled=finishing||submitted||!!task?.feedback||(operateurRequis()&&!operateur());$('case').disabled=$('scan').disabled;
-  $('finish').disabled=finishing||sending||!batch.items.length||!!task?.feedback||(operateurRequis()&&!operateur());
+  $('finish').disabled=finishing||sending||lotVide()||!!task?.feedback||(operateurRequis()&&!operateur());
   $('finish').textContent=finishing?'Enregistrement…':'✓  Terminer le scan';
   const fingerprint=JSON.stringify([task?.id,batch,submitted]);
   if(fingerprint!==lastList){
@@ -110,7 +111,7 @@ async function flushProgress(){
   finally{sending=false;render();if(queued&&!finishing)progressTimer=setTimeout(flushProgress,1500)}
 }
 async function finish(){
-  if(!task||finishing||sending)return;if(!batch.items.length){$('status').textContent='Confirmez au moins un matériel.';return}
+  if(!task||finishing||sending)return;if(lotVide()){$('status').textContent=task?.mode==='DEMONTAGE'?'Scannez la mallette ou au moins un matériel.':'Confirmez au moins un matériel.';return}
   if(operateurRequis()&&!operateur()){$('status').textContent='Indiquez votre nom avant de terminer.';$('operator').focus?.();return}rememberOperateur();
   finishing=true;pollGeneration++;pollController?.abort();pollController=null;queued=null;if(progressTimer)clearTimeout(progressTimer);render();
   const captured=session,body=payload();save();
@@ -120,9 +121,9 @@ async function finish(){
 }
 async function scan(mode){
   if(!task||submitted||finishing)return;if(operateurRequis()&&!operateur()){$('status').textContent='Indiquez votre nom avant de scanner.';$('operator').focus?.();return}rememberOperateur();queueProgress();nonce=crypto.randomUUID();
-  const u=new URL('scan-mobile.html?v=10.2',location.href);
+  const u=new URL('scan-mobile.html?v=12',location.href);
   const cached=store('instrumentation-batch-'+task.id+'-'+task.cm,{items:[...batch.items],mallette:batch.mallette,cm:task.cm,at:Date.now()});
-  for(const [k,v] of Object.entries({mode,cm:task.cm,items:cached?'':batch.items.join('|'),mallette:cached?'':batch.mallette,nonce,scanSessionId:task.id,scanRequest:task.id}))u.searchParams.set(k,v);
+  for(const [k,v] of Object.entries({mode,demontage:task.mode==='DEMONTAGE'?'1':'',cm:task.cm,items:cached?'':batch.items.join('|'),mallette:cached?'':batch.mallette,nonce,scanSessionId:task.id,scanRequest:task.id}))u.searchParams.set(k,v);
   $('scanner').src=u.href;$('scanner').hidden=false;render();
 }
 window.addEventListener('message',async e=>{
